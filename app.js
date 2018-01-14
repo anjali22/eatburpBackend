@@ -4,25 +4,75 @@ var port = 3000;
 var bodyParser = require('body-parser');
 var fileparser = require('connect-multiparty')();
 var router = express.Router();
+var passport = require('passport');
+var flash    = require('connect-flash');
 
+var morgan       = require('morgan');
+var cookieParser = require('cookie-parser');
+var session      = require('express-session');
 
 var fs = require("fs");
+var uri = 'mongodb://admin:admin@ds251985.mlab.com:51985/eatburp';
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
+// required for passport
+app.use(session({ secret: 'iloveatburp' })); // session secret
+app.use(passport.initialize());
+app.use(passport.session()); // persistent login sessions
+app.use(flash()); // use connect-flash for flash messages stored in session
+require('./config/passport')(passport); // pass passport for configuration
 //app.use(express.static(__dirname + '/addUser.'));
 
 var mongoose = require("mongoose");
 mongoose.Promise = global.Promise;
 
-mongoose.connect("mongodb://localhost:27017/eatBurp");
+//mongoose.connect("mongodb://localhost:27017/eatBurp");
+mongoose.connect(uri, {
+    useMongoClient: true,
+    
+});
 var db = mongoose.connection;
+
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function() {
     console.log("we're connected!");
   });
 
 console.log("connected or not???",mongoose.connection.readyState);
+
+// process the login form
+app.post('/login', passport.authenticate('local-login', {
+    successRedirect : '/profile', // redirect to the secure profile section
+    failureRedirect : '/login', // redirect back to the signup page if there is an error
+    failureFlash : true // allow flash messages
+}));
+
+app.get('/logout', function(req, res) {
+    req.logout();
+    res.redirect('/');
+});
+
+app.get('/profile', function(req, res) {
+    res.sendFile(__dirname + "/profile.html");
+    
+})
+
+app.get('/signup', function(req, res) {
+    res.sendFile(__dirname + "/signup.html");
+    
+})
+app.post('/signup', passport.authenticate('local-signup', {
+    successRedirect : '/profile', // redirect to the secure profile section
+    failureRedirect : '/signup', // redirect back to the signup page if there is an error
+    failureFlash : true // allow flash messages
+}));
+
+
+
+
+
+
 //Dummy schema
 var nameSchema = new mongoose.Schema({
     firstName: String,
@@ -152,7 +202,7 @@ var itemSchema = new mongoose.Schema({
     tags: [String],
 
 });
-var items = mongoose.model('food', itemSchema);
+var items = mongoose.model('items', itemSchema);
 
 app.get('/addItem', function(req, res){
         console.log("jhihhi");
@@ -269,26 +319,28 @@ app.post("/addReview", (req, res) => {
     });
 });
 
-app.get("/searchReview", (req,res) => {
-    console.log("searching");
-    reviews.find( 
-            function (err, review) {
-                if (err) return console.error(err);
-                console.log("review----------", review);
-                res.json({ docs: review })
-            }
-        );
-});
+// app.get("/searchReview", (req,res) => {
+//     console.log("searching");
+//     reviews.find( 
+//             function (err, review) {
+//                 if (err) return console.error(err);
+//                 console.log("review----------", review);
+//                 res.json({ docs: review })
+//             }
+//         );
+// });
 
 /*---------------------- end of review data --------------*/
 
 
 //Add Rating/Review
 var restoItemSchema = new mongoose.Schema({
-    resto_id: mongoose.Schema.Types.ObjectId,
+    id: Number,
+    resto_id: Number,
     //item_id: {id: mongoose.Schema.Types.ObjectId, name: String },
-    item_id: mongoose.Schema.Types.ObjectId,
-    review_id: [mongoose.Schema.Types.ObjectId],
+    item_id: Number,
+    //review_id: [mongoose.Schema.Types.ObjectId],
+    cost: Number,
     //user_id: mongoose.Schema.Types.ObjectId,
     //review_id:{id: [mongoose.Schema.Types.ObjectId], rating: [Number]},
     avg_rating: Number,
@@ -317,7 +369,7 @@ app.post("/addReview", (req, res) => {
 
 app.get("/searchReview", (req,res) => {
     console.log("searching");
-    resto_item_rating_Data.find( 
+    resto_item_rating.find( 
             function (err, item) {
                 if (err) return console.error(err);
                 console.log("item----------", item);
@@ -335,3 +387,14 @@ app.get("/searchReview", (req,res) => {
 app.listen(port, () => {
     console.log("Server listening on port " + port);
 });
+
+// route middleware to make sure a user is logged in
+function isLoggedIn(req, res, next) {
+    
+        // if user is authenticated in the session, carry on 
+        if (req.isAuthenticated())
+            return next();
+    
+        // if they aren't redirect them to the home page
+        res.redirect('/');
+}
