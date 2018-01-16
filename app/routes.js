@@ -156,7 +156,7 @@ app.get('/uploadimage', function(req, res){
 
 app.post('/uploadimage', function (req, res) {
 
-    const s3 = new aws.S3();
+    const s3 = new AWS.S3();
     console.log(req,"upload imageeeeeee");
     const fileName = req.query['file-name'];
     const fileType = req.query['file-type'];
