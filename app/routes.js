@@ -15,6 +15,20 @@ var schema = new Schema({
 // our model
 var A = mongoose.model('A', schema);
 
+var fs = require('fs');
+var AWS = require('aws-sdk');
+const S3_BUCKET = process.env.S3_BUCKET;
+AWS.config.region = 'us-east-2';
+// var accessKeyId =  process.env.AWS_ACCESS_KEY || "xxxxxx";
+// var secretAccessKey = process.env.AWS_SECRET_KEY || "+xxxxxx+B+xxxxxxx";
+
+// AWS.config.update({
+//     accessKeyId: accessKeyId,
+//     secretAccessKey: secretAccessKey
+// });
+
+// var s3 = new AWS.S3();
+
 module.exports = function(app, passport) {
     
     // normal routes ===============================================================
@@ -141,20 +155,45 @@ app.get('/uploadimage', function(req, res){
 });
 
 app.post('/uploadimage', function (req, res) {
-     // store an img in binary in mongo
-     var a = new A;
-     a.img.data = fs.readFileSync(imgPath);
-     a.img.contentType = 'image/png';
-     a.save(function (err, a) {
-       if (err) throw err;
+
+    const s3 = new aws.S3();
+    console.log(req,"upload imageeeeeee");
+    const fileName = req.query['file-name'];
+    const fileType = req.query['file-type'];
+    const s3Params = {
+      Bucket: S3_BUCKET,
+      Key: fileName,
+      Expires: 60,
+      ContentType: fileType,
+      ACL: 'public-read'
+    };
+  
+    s3.getSignedUrl('putObject', s3Params, (err, data) => {
+      if(err){
+        console.log(err);
+        return res.end();
+      }
+      const returnData = {
+        signedRequest: data,
+        url: `https://${S3_BUCKET}.s3.amazonaws.com/${fileName}`
+      };
+      res.write(JSON.stringify(returnData));
+      res.end();
+    });
+//      // store an img in binary in mongo
+//      var a = new A;
+//      a.img.data = fs.readFileSync(imgPath);
+//      a.img.contentType = 'image/png';
+//      a.save(function (err, a) {
+//        if (err) throw err;
  
-    console.error('saved img to mongo');
-}).then(item => {
-    res.send("image saved to database");
-})
-.catch(err => {
-    res.status(400).send("Unable to save image to database");
-});
+//     console.error('saved img to mongo');
+// }).then(item => {
+//     res.send("image saved to database");
+// })
+// .catch(err => {
+//     res.status(400).send("Unable to save image to database");
+// });
 
 });
 
