@@ -189,8 +189,8 @@ app.get('/uploadimage', function(req, res){
 const s3 = new AWS.S3();
 
 app.post('/uploadimage', function (req, res) {
-    if (!req.files)
-    return res.status(400).send('No files were uploaded.');
+    // if (!req.files)
+    // return res.status(400).send('No files were uploaded.');
  
    
     console.log(req,"upload imageeeeeee");
