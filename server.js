@@ -80,6 +80,6 @@ require('./app/routes.js')(app, passport); // load our routes and pass in our ap
 //     console.log("Server listening on port " + port);
 // });
 
-app.listen(port, function(){
+app.listen(process.env.PORT || 8081, function(){
     console.log('listening on', port);
   });
