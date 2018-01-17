@@ -221,18 +221,27 @@ app.post('/uploadimage', function (req, res) {
         ACL: 'public-read'
       };
   
-    s3.getSignedUrl('putObject', s3Params, (err, data) => {
-      if(err){
-        console.log(err);
-        return res.end();
-      }
-      const returnData = {
-        signedRequest: data,
-        url: `https://${S3_BUCKET}.s3.amazonaws.com/${fileName}`
-      };
-      res.write(JSON.stringify(returnData));
-      res.end();
+      s3.putObject(s3params, function (perr, pres) {
+        if (perr) {
+            winston.log("Error uploading data: ", perr);
+            console.log("Error uploading data: ", perr);
+        } else {
+            winston.log("Successfully uploaded data to myBucket/myKey");
+            console.log("Successfully uploaded data to myBucket/myKey");
+        }
     });
+    // s3.getSignedUrl('putObject', s3Params, (err, data) => {
+    //   if(err){
+    //     console.log(err);
+    //     return res.end();
+    //   }
+    //   const returnData = {
+    //     signedRequest: data,
+    //     url: `https://${S3_BUCKET}.s3.amazonaws.com/${fileName}`
+    //   };
+    //   res.write(JSON.stringify(returnData));
+    //   res.end();
+    // });
 //      // store an img in binary in mongo
 //      var a = new A;
 //      a.img.data = fs.readFileSync(imgPath);
