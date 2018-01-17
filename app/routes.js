@@ -14,6 +14,7 @@ app.use(bodyParser.urlencoded({
   
 var fs = require('fs');
 
+var multerS3 = require('multer-s3');
 var multer  =   require('multer');
 var storage =   multer.diskStorage({
   destination: function (req, file, callback) {
@@ -188,7 +189,23 @@ app.get('/uploadimage', function(req, res){
 
 var s3 = new AWS.S3();
 
-app.post('/uploadimage', function (req, res) {
+var upload = multer({
+    storage: multerS3({
+        s3: s3,
+        bucket: S3_BUCKET,
+        key: function (req, file, cb) {
+            console.log(file);
+            cb(null, file.originalname); //use Date.now() for unique file keys
+        }
+    })
+});
+
+//used by upload form
+app.post('/uploadimage', upload.array('upl',1), function (req, res, next) {
+    res.send("Uploaded!");
+});
+
+app.post('/uploadimageold', function (req, res) {
     // if (!req.files)
     // return res.status(400).send('No files were uploaded.');
  
