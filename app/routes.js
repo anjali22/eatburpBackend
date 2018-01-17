@@ -213,7 +213,7 @@ app.post('/uploadimage', function (req, res) {
     winston.log(fileType,"upload imageeeeeee");
 
 
-    var s3Params = {
+    const s3Params = {
         Bucket: S3_BUCKET,
         Key: 'lassi.jpg',
         Expires: 60,
@@ -221,7 +221,7 @@ app.post('/uploadimage', function (req, res) {
         ACL: 'public-read'
       };
   
-      s3.putObject(s3params, function (perr, pres) {
+      s3.putObject(s3Params, function (perr, pres) {
         if (perr) {
             winston.log("Error uploading data: ", perr);
             console.log("Error uploading data: ", perr);
