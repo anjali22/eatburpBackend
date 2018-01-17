@@ -198,7 +198,7 @@ var upload = multer({
           cb(null, {fieldName: file.fieldname});
         },
         key: function (req, file, cb) {
-          cb(null, Date.now()+file.originalname)
+          cb(null, Date.now().toString())
         }
         // key: function (req, file, cb) {
         //     console.log(file);
@@ -208,8 +208,8 @@ var upload = multer({
 });
 
 //used by upload form
-app.post('/uploadimage', upload.single('upl',1), function (req, res, next) {
-    res.send(req.file); console.log(req.file);
+app.post('/uploadimage', upload.array('photos', 3), function (req, res, next) {
+    res.send(req.files); console.log(req.files);
 });
 
 app.post('/uploadimageold', function (req, res) {
