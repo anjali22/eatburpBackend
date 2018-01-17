@@ -1,8 +1,31 @@
 var restos       = require('../app/models/restaurant');
 
+var bodyParser = require('body-parser');
+const fileUpload = require('express-fileupload');
 //for image upload
 var express = require('express');
+var app = express();
+app.use(bodyParser.json()); // get information from html forms
+app.use(bodyParser.urlencoded({
+    extended: true
+  }));
+
+  app.use(fileUpload());
+  
 var fs = require('fs');
+
+var multer  =   require('multer');
+var storage =   multer.diskStorage({
+  destination: function (req, file, callback) {
+    callback(null, './uploads');
+  },
+  filename: function (req, file, callback) {
+    callback(null, file.fieldname + '-' + Date.now());
+  }
+});
+var upload = multer({ storage : storage}).single('userPhoto');
+
+
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 // img path
@@ -166,7 +189,8 @@ app.get('/uploadimage', function(req, res){
 const s3 = new AWS.S3();
 
 app.post('/uploadimage', function (req, res) {
-
+    if (!req.files)
+    return res.status(400).send('No files were uploaded.');
  
    
     console.log(req,"upload imageeeeeee");
@@ -174,6 +198,10 @@ app.post('/uploadimage', function (req, res) {
 
     const fileName = req.body['file-name'];
     console.log(fileName,"upload imageeeeeee");
+    console.log(req.body,"bodyyyyyyyyyyyyyyyyyyyyy");
+    console.log(req.params,"paramssssssssssssssss");
+    console.log(req.query,"queryyyyyyyyyyyyyyyyyy");
+    console.log(req.files,"filesssssssssssssssssss")
     winston.log(req.body);
     winston.log(req.params);
     winston.log(fileName,"upload imageeeeeee");

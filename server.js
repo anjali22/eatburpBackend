@@ -1,6 +1,6 @@
 var express = require("express");
 var app = express();
-var port = 3000;
+var port = 8081;
 var bodyParser = require('body-parser');
 var fileparser = require('connect-multiparty')();
 var router = express.Router();
@@ -37,7 +37,7 @@ app.use(flash()); // use connect-flash for flash messages stored in session
     
  app.use(bodyParser.json());
  app.use(bodyParser.urlencoded({ extended: true }));
- app.use(bodyParser({uploadDir:'/path/to/temporary/directory/to/store/uploaded/files'}));
+ //app.use(bodyParser({uploadDir:'/path/to/temporary/directory/to/store/uploaded/files'}));
 // // required for passport
 // app.use(session({ secret: 'iloveatburp' })); // session secret
 // app.use(passport.initialize());
@@ -80,6 +80,6 @@ require('./app/routes.js')(app, passport); // load our routes and pass in our ap
 //     console.log("Server listening on port " + port);
 // });
 
-app.listen(process.env.PORT || 3000, function(){
+app.listen(port, function(){
     console.log('listening on', port);
   });
