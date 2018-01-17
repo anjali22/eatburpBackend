@@ -193,16 +193,23 @@ var upload = multer({
     storage: multerS3({
         s3: s3,
         bucket: S3_BUCKET,
+        acl: 'public-read',
+        metadata: function (req, file, cb) {
+          cb(null, {fieldName: file.fieldname});
+        },
         key: function (req, file, cb) {
-            console.log(file);
-            cb(null, file.originalname); //use Date.now() for unique file keys
+          cb(null, Date.now()+file.originalname)
         }
+        // key: function (req, file, cb) {
+        //     console.log(file);
+        //     cb(null, file.originalname); //use Date.now() for unique file keys
+        // }
     })
 });
 
 //used by upload form
 app.post('/uploadimage', upload.array('upl',1), function (req, res, next) {
-    res.send("Uploaded!");
+    res.send(req.file); console.log(req.file);
 });
 
 app.post('/uploadimageold', function (req, res) {
