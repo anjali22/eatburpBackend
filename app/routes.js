@@ -277,6 +277,7 @@ app.post('/uploadimage', type, function (req, res) {
         } else {
             winston.log("Successfully uploaded data to myBucket/myKey");
             console.log("Successfully uploaded data to myBucket/myKey");
+            res.send("Image saved to database");
         }
     });
     // s3.getSignedUrl('putObject', s3Params, (err, data) => {
