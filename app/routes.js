@@ -226,13 +226,13 @@ app.post('/uploadimage', type, function (req, res) {
       var target_path = 'uploads/' + req.file.originalname;
       console.log(req.file,'reqqqqqqqqqqqqqqqqqqqqqqqqqq');
       console.log(req.file.originalname);
-      fs.readFile(tmp_path, function(err, data)
-      {
-        fs.writeFile(target_path, data, function (err)
-        {
-          res.render('complete');
-        })
-    });
+    //   fs.readFile(tmp_path, function(err, data)
+    //   {
+    //     fs.writeFile(target_path, data, function (err)
+    //     {
+    //       res.render('complete');
+    //     })
+    // });
 
     // console.log(req,"upload imageeeeeee");
     // winston.log(req,"upload imageeeeeee");
