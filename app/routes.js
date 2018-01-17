@@ -186,7 +186,7 @@ app.get('/uploadimage', function(req, res){
 //res.sendFile(__dirname + '/addResto.html');
 });
 
-const s3 = new AWS.S3();
+var s3 = new AWS.S3();
 
 app.post('/uploadimage', function (req, res) {
     // if (!req.files)
@@ -213,7 +213,7 @@ app.post('/uploadimage', function (req, res) {
     winston.log(fileType,"upload imageeeeeee");
 
 
-    const s3Params = {
+    var s3Params = {
         Bucket: S3_BUCKET,
         Key: 'lassi.jpg',
         Expires: 60,
