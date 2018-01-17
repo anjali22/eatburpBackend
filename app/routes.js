@@ -201,7 +201,9 @@ app.post('/uploadimage', function (req, res) {
     console.log(req.body,"bodyyyyyyyyyyyyyyyyyyyyy");
     console.log(req.params,"paramssssssssssssssss");
     console.log(req.query,"queryyyyyyyyyyyyyyyyyy");
-    console.log(req.files,"filesssssssssssssssssss")
+    console.log(req.files,"filesssssssssssssssssss");
+    winston.log(req.files,"filesssssssssss");
+    
     winston.log(req.body);
     winston.log(req.params);
     winston.log(fileName,"upload imageeeeeee");
