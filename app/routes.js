@@ -215,7 +215,7 @@ app.post('/uploadimage', function (req, res) {
 
     const s3Params = {
         Bucket: S3_BUCKET,
-        Key: fileName,
+        Key: 'lassi.jpg',
         Expires: 60,
         ContentType: fileType,
         ACL: 'public-read'
