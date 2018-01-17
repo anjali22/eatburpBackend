@@ -208,7 +208,7 @@ var upload = multer({
 });
 
 //used by upload form
-app.post('/uploadimage', upload.array('upl',1), function (req, res, next) {
+app.post('/uploadimage', upload.single('upl',1), function (req, res, next) {
     res.send(req.file); console.log(req.file);
 });
 
