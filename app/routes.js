@@ -15,7 +15,6 @@ var schema = new Schema({
 // our model
 var A = mongoose.model('A', schema);
 
-var fs = require('fs');
 var AWS = require('aws-sdk');
 const S3_BUCKET = process.env.S3_BUCKET;
 AWS.config.region = 'us-east-2';
@@ -28,6 +27,16 @@ AWS.config.region = 'us-east-2';
 // });
 
 // var s3 = new AWS.S3();
+
+var winston = require('winston');
+
+  var logger = new winston.Logger({
+    level: 'error',
+    transports: [
+      new (winston.transports.File)({ filename: 'error.log' })
+    ]
+  });
+
 
 module.exports = function(app, passport) {
     
@@ -154,19 +163,33 @@ app.get('/uploadimage', function(req, res){
 //res.sendFile(__dirname + '/addResto.html');
 });
 
+const s3 = new AWS.S3();
+
 app.post('/uploadimage', function (req, res) {
 
-    const s3 = new AWS.S3();
+ 
+   
     console.log(req,"upload imageeeeeee");
-    const fileName = req.query['file-name'];
+    winston.log(req,"upload imageeeeeee");
+
+    const fileName = req.body['file-name'];
+    console.log(fileName,"upload imageeeeeee");
+    winston.log(req.body);
+    winston.log(req.params);
+    winston.log(fileName,"upload imageeeeeee");
+
     const fileType = req.query['file-type'];
+    console.log(fileType,"upload imageeeeeee");
+    winston.log(fileType,"upload imageeeeeee");
+
+
     const s3Params = {
-      Bucket: S3_BUCKET,
-      Key: fileName,
-      Expires: 60,
-      ContentType: fileType,
-      ACL: 'public-read'
-    };
+        Bucket: S3_BUCKET,
+        Key: fileName,
+        Expires: 60,
+        ContentType: fileType,
+        ACL: 'public-read'
+      };
   
     s3.getSignedUrl('putObject', s3Params, (err, data) => {
       if(err){
