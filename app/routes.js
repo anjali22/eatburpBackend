@@ -189,10 +189,10 @@ app.get('/uploadimage', function(req, res){
 
 var s3 = new AWS.S3();
 
-var upload = multer({
+var upload1 = multer({
     storage: multerS3({
         s3: s3,
-        bucket: S3_BUCKET,
+        bucket: 'eatburp',
         acl: 'public-read',
         metadata: function (req, file, cb) {
           cb(null, {fieldName: file.fieldname});
@@ -207,41 +207,60 @@ var upload = multer({
     })
 });
 
+var upload = multer({ dest: 'uploads/' });
+
 //used by upload form
 app.post('/uploadimageold', upload.array('photos', 3), function (req, res, next) {
     res.send(req.files); console.log(req.files);
 });
 
-app.post('/uploadimage', function (req, res) {
+var type = upload.single('image');
+
+app.post('/uploadimage', type, function (req, res) {
     // if (!req.files)
     // return res.status(400).send('No files were uploaded.');
- 
-   
-    console.log(req,"upload imageeeeeee");
-    winston.log(req,"upload imageeeeeee");
-
-    const fileName = req.body['file-name'];
-    console.log(fileName,"upload imageeeeeee");
-    console.log(req.body,"bodyyyyyyyyyyyyyyyyyyyyy");
-    console.log(req.params,"paramssssssssssssssss");
-    console.log(req.query,"queryyyyyyyyyyyyyyyyyy");
-    console.log(req.files[0].filename,"filesssssssssssssssssss");
-    winston.log(req.files[0].filename,"filesssssssssss");
+    var tmp_path = req.file.path;
     
-    winston.log(req.body);
-    winston.log(req.params);
-    winston.log(fileName,"upload imageeeeeee");
+      /** The original name of the uploaded file
+          stored in the variable "originalname". **/
+      var target_path = 'uploads/' + req.file.originalname;
+      console.log(req.file,'reqqqqqqqqqqqqqqqqqqqqqqqqqq');
+      console.log(req.file.originalname);
+      fs.readFile(tmp_path, function(err, data)
+      {
+        fs.writeFile(target_path, data, function (err)
+        {
+          res.render('complete');
+        })
+    });
 
-    const fileType = req.query['file-type'];
-    console.log(fileType,"upload imageeeeeee");
-    winston.log(fileType,"upload imageeeeeee");
+    // console.log(req,"upload imageeeeeee");
+    // winston.log(req,"upload imageeeeeee");
 
+    // const fileName = req.body['file-name'];
+    // console.log(fileName,"upload imageeeeeee");
+    // console.log(req.body,"bodyyyyyyyyyyyyyyyyyyyyy");
+    // console.log(req.params,"paramssssssssssssssss");
+    // console.log(req.query,"queryyyyyyyyyyyyyyyyyy");
+    // console.log(req.files,"filesssssssssssssssssss");
+    // winston.log(req.files,"filesssssssssss");
+    
+    // //winston.log(req.body);
+    // winston.log(req.params);
+    // winston.log(fileName,"upload imageeeeeee");
+
+    // const fileType = req.query['file-type'];
+    // console.log(fileType,"upload imageeeeeee");
+    // winston.log(fileType,"upload imageeeeeee");
+
+    const fileName = req.file.originalname;
+    const mimeType = req.file.mimeType;
 
     const s3Params = {
         Bucket: S3_BUCKET,
-        Key: 'lassi.jpg',
+        Key: fileName,
         Expires: 60,
-        ContentType: fileType,
+        ContentType: mimeType,
         ACL: 'public-read'
       };
   
@@ -249,6 +268,12 @@ app.post('/uploadimage', function (req, res) {
         if (perr) {
             winston.log("Error uploading data: ", perr);
             console.log("Error uploading data: ", perr);
+            const returnData = {
+            signedRequest: data,
+                url: `https://${S3_BUCKET}.s3.amazonaws.com/${fileName}`
+            };
+            res.write(JSON.stringify(returnData));
+            res.end();
         } else {
             winston.log("Successfully uploaded data to myBucket/myKey");
             console.log("Successfully uploaded data to myBucket/myKey");
