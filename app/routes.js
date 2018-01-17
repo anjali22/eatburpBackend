@@ -208,11 +208,11 @@ var upload = multer({
 });
 
 //used by upload form
-app.post('/uploadimage', upload.array('photos', 3), function (req, res, next) {
+app.post('/uploadimageold', upload.array('photos', 3), function (req, res, next) {
     res.send(req.files); console.log(req.files);
 });
 
-app.post('/uploadimageold', function (req, res) {
+app.post('/uploadimage', function (req, res) {
     // if (!req.files)
     // return res.status(400).send('No files were uploaded.');
  
