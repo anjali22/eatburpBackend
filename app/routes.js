@@ -8,9 +8,9 @@ var app = express();
 app.use(bodyParser.json()); // get information from html forms
 app.use(bodyParser.urlencoded({
     extended: true
-  }));
-
-  app.use(fileUpload());
+}));
+ 
+app.use(fileUpload());
   
 var fs = require('fs');
 

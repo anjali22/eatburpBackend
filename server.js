@@ -1,6 +1,6 @@
 var express = require("express");
 var app = express();
-var port = 8081;
+var port = 3000;
 var bodyParser = require('body-parser');
 var fileparser = require('connect-multiparty')();
 var router = express.Router();
@@ -80,6 +80,6 @@ require('./app/routes.js')(app, passport); // load our routes and pass in our ap
 //     console.log("Server listening on port " + port);
 // });
 
-app.listen(process.env.PORT || 8081, function(){
+app.listen(process.env.PORT || 3000, function(){
     console.log('listening on', port);
-  });
+});
