@@ -1,5 +1,4 @@
 var restos       = require('../app/models/restaurant');
-
 var bodyParser = require('body-parser');
 const fileUpload = require('express-fileupload');
 //for image upload
@@ -38,19 +37,18 @@ var schema = new Schema({
 
 // our model
 var A = mongoose.model('A', schema);
-
+// s3 setup
 var AWS = require('aws-sdk');
+var dotenv = require('dotenv');
+dotenv.config();
+
 const S3_BUCKET = process.env.S3_BUCKET;
-AWS.config.region = 'us-east-2';
-// var accessKeyId =  process.env.AWS_ACCESS_KEY || "xxxxxx";
-// var secretAccessKey = process.env.AWS_SECRET_KEY || "+xxxxxx+B+xxxxxxx";
 
-// AWS.config.update({
-//     accessKeyId: accessKeyId,
-//     secretAccessKey: secretAccessKey
-// });
-
-// var s3 = new AWS.S3();
+AWS.config.update({
+    region: 'us-east-2',
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+});
 
 var winston = require('winston');
 
@@ -85,8 +83,8 @@ module.exports = function(app, passport) {
         });
 
         // =============================================================================
-// AUTHENTICATE (FIRST LOGIN) ==================================================
-// =============================================================================
+        // AUTHENTICATE (FIRST LOGIN) ==================================================
+        // =============================================================================
 
     // locally --------------------------------
         // LOGIN ===============================
@@ -189,124 +187,50 @@ app.get('/uploadimage', function(req, res){
 
 var s3 = new AWS.S3();
 
-var upload1 = multer({
-    storage: multerS3({
-        s3: s3,
-        bucket: 'eatburp',
-        acl: 'public-read',
-        metadata: function (req, file, cb) {
-          cb(null, {fieldName: file.fieldname});
-        },
-        key: function (req, file, cb) {
-          cb(null, Date.now().toString())
-        }
-        // key: function (req, file, cb) {
-        //     console.log(file);
-        //     cb(null, file.originalname); //use Date.now() for unique file keys
-        // }
-    })
-});
-
 var upload = multer({ dest: 'uploads/' });
-
-//used by upload form
-app.post('/uploadimageold', upload.array('photos', 3), function (req, res, next) {
-    res.send(req.files); console.log(req.files);
-});
 
 var type = upload.single('image');
 
 app.post('/uploadimage', type, function (req, res) {
-    // if (!req.files)
-    // return res.status(400).send('No files were uploaded.');
     var tmp_path = req.file.path;
-    
-      /** The original name of the uploaded file
+    fs.readFile(tmp_path, function (err, data) {
+        if (err) throw err;
+
+        /** The original name of the uploaded file
           stored in the variable "originalname". **/
-      var target_path = 'uploads/' + req.file.originalname;
-      console.log(req.file,'reqqqqqqqqqqqqqqqqqqqqqqqqqq');
-      console.log(req.file.originalname);
-    //   fs.readFile(tmp_path, function(err, data)
-    //   {
-    //     fs.writeFile(target_path, data, function (err)
-    //     {
-    //       res.render('complete');
-    //     })
-    // });
 
-    // console.log(req,"upload imageeeeeee");
-    // winston.log(req,"upload imageeeeeee");
+        console.log(req.file, 'reqqqqqqqqqqqqqqqqqqqqqqqqqq');
 
-    // const fileName = req.body['file-name'];
-    // console.log(fileName,"upload imageeeeeee");
-    // console.log(req.body,"bodyyyyyyyyyyyyyyyyyyyyy");
-    // console.log(req.params,"paramssssssssssssssss");
-    // console.log(req.query,"queryyyyyyyyyyyyyyyyyy");
-    // console.log(req.files,"filesssssssssssssssssss");
-    // winston.log(req.files,"filesssssssssss");
-    
-    // //winston.log(req.body);
-    // winston.log(req.params);
-    // winston.log(fileName,"upload imageeeeeee");
+        const fileName = req.file.originalname;
+        const mimeType = req.file.mimeType;
 
-    // const fileType = req.query['file-type'];
-    // console.log(fileType,"upload imageeeeeee");
-    // winston.log(fileType,"upload imageeeeeee");
+        const s3Params = {
+            Bucket: S3_BUCKET,
+            Key: fileName,
+            Expires: 60,
+            Body: data,
+            ContentType: mimeType,
+            ACL: 'public-read'
+        };
 
-    const fileName = req.file.originalname;
-    const mimeType = req.file.mimeType;
-
-    const s3Params = {
-        Bucket: S3_BUCKET,
-        Key: fileName,
-        Expires: 60,
-        ContentType: mimeType,
-        ACL: 'public-read'
-      };
-  
-      s3.putObject(s3Params, function (perr, pres) {
-        if (perr) {
-            winston.log("Error uploading data: ", perr);
-            console.log("Error uploading data: ", perr);
-            const returnData = {
-            signedRequest: data,
-                url: `https://${S3_BUCKET}.s3.amazonaws.com/${fileName}`
-            };
-            res.write(JSON.stringify(returnData));
-            res.end();
-        } else {
-            winston.log("Successfully uploaded data to myBucket/myKey");
-            console.log("Successfully uploaded data to myBucket/myKey");
-            res.send("Image saved to database");
-        }
-    });
-    // s3.getSignedUrl('putObject', s3Params, (err, data) => {
-    //   if(err){
-    //     console.log(err);
-    //     return res.end();
-    //   }
-    //   const returnData = {
-    //     signedRequest: data,
-    //     url: `https://${S3_BUCKET}.s3.amazonaws.com/${fileName}`
-    //   };
-    //   res.write(JSON.stringify(returnData));
-    //   res.end();
-    // });
-//      // store an img in binary in mongo
-//      var a = new A;
-//      a.img.data = fs.readFileSync(imgPath);
-//      a.img.contentType = 'image/png';
-//      a.save(function (err, a) {
-//        if (err) throw err;
- 
-//     console.error('saved img to mongo');
-// }).then(item => {
-//     res.send("image saved to database");
-// })
-// .catch(err => {
-//     res.status(400).send("Unable to save image to database");
-// });
-
+        s3.upload(s3Params, function (error, data) {
+            if (error) {
+                winston.log("Error uploading data: ", error);
+                console.log("Error uploading data: ", error);
+                const returnData = {
+                    signedRequest: data,
+                    url: `https://${S3_BUCKET}.s3.amazonaws.com/${fileName}`
+                };
+                res.write(JSON.stringify(returnData));
+                res.end();
+            } else {
+                console.log("response--------------", data);
+                winston.log("Successfully uploaded data to myBucket/myKey");
+                console.log("Successfully uploaded data to myBucket/myKey");
+                res.send("Image saved to database");
+            }
+        });
+    })
 });
 
 function isLoggedIn(req, res, next) {
