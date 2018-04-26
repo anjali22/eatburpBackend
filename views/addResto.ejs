@@ -7,14 +7,23 @@
     <body>
     	<h1>Add Restaurant Details</h1>
 
-    	<form action = "/addResto" method="POST">
+    	<form id = "uploadForm" enctype = "multipart/form-data" action = "/uploadrestoimage" method = "post">
             <label>Enter Your Name</label><br>
             <input type="text" name="name" placeholder="Name" required>
-            <input type="text" name="locality" placeholder="Address" required>
-            <input type="text" name="street" placeholder="Street" required>
-            <input type="text" name="landmark" placeholder="Landmark" required>
-            <input type="text" name="pincode" placeholder="Pin Code" required>
-            <input type="text" name="name" placeholder="Famous For" required>
+            <input type="text" name="address.building" placeholder="building" required>
+            <!-- <input type="text" name="coord" placeholder="cordinates" required>
+            <input type="text" name="coord" placeholder="coordinates" required> -->
+            <!-- <input type="text" name="locality" placeholder="locality" required>
+            <input type="text" name="streat" placeholder="Street" required> 
+            <input type="text" name="zipcode" placeholder="Pin Code" required> -->
+            <!-- <input type="text" name="famousFor" placeholder="Famous For" required>
+            <input type="text" name="phone" placeholder="Phone" required>
+            <input type="text" name="avg_cost_two" placeholder="avg cost" required>
+            <input type="text" name="openTime" placeholder="open time" required>
+            <input type="text" name="closeTime" placeholder="close time" required>
+            <input type="text" name="category" placeholder="category" required>
+
+                        <input type="file" name="image" multiple /> -->
 
             <input type="submit" value="Submit form">
         </form>

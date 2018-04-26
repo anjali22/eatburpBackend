@@ -1,6 +1,8 @@
 var restos       = require('../app/models/restaurant');
+var foodItem = require('../app/models/foodItem');
 var bodyParser = require('body-parser');
 const fileUpload = require('express-fileupload');
+var Promise = require('promise');
 //for image upload
 var express = require('express');
 var app = express();
@@ -9,22 +11,11 @@ app.use(bodyParser.urlencoded({
     extended: true
 }));
  
+
 app.use(fileUpload());
   
 var fs = require('fs');
-
-var multerS3 = require('multer-s3');
 var multer  =   require('multer');
-var storage =   multer.diskStorage({
-  destination: function (req, file, callback) {
-    callback(null, './uploads');
-  },
-  filename: function (req, file, callback) {
-    callback(null, file.fieldname + '-' + Date.now());
-  }
-});
-var upload = multer({ storage : storage}).single('userPhoto');
-
 
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
@@ -178,60 +169,166 @@ restosData.save(function(err){
     });
 });
 
-
-app.get('/uploadimage', function(req, res){
-    console.log("jhihhi");
-    res.render('uploadImages.ejs');
-//res.sendFile(__dirname + '/addResto.html');
-});
-
 var s3 = new AWS.S3();
 
-var upload = multer({ dest: 'uploads/' });
+var async = require('async');
 
-var type = upload.single('image');
+var upload = multer().array('photo', 25);
 
-app.post('/uploadimage', type, function (req, res) {
-    var tmp_path = req.file.path;
-    fs.readFile(tmp_path, function (err, data) {
-        if (err) throw err;
+    //var type = upload.array('photo', 25);
 
-        /** The original name of the uploaded file
-          stored in the variable "originalname". **/
-
-        console.log(req.file, 'reqqqqqqqqqqqqqqqqqqqqqqqqqq');
-
-        const fileName = req.file.originalname;
-        const mimeType = req.file.mimeType;
-
-        const s3Params = {
-            Bucket: S3_BUCKET,
-            Key: fileName,
-            Expires: 60,
-            Body: data,
-            ContentType: mimeType,
-            ACL: 'public-read'
-        };
-
-        s3.upload(s3Params, function (error, data) {
-            if (error) {
-                winston.log("Error uploading data: ", error);
-                console.log("Error uploading data: ", error);
-                const returnData = {
-                    signedRequest: data,
-                    url: `https://${S3_BUCKET}.s3.amazonaws.com/${fileName}`
-                };
-                res.write(JSON.stringify(returnData));
-                res.end();
-            } else {
-                console.log("response--------------", data);
-                winston.log("Successfully uploaded data to myBucket/myKey");
-                console.log("Successfully uploaded data to myBucket/myKey");
-                res.send("Image saved to database");
-            }
-        });
+app.post('/uploadrestoimage', function (req, res) {
+    console.log("req----------",req.files);
+    console.log(req.body);
+    var tmp_path;
+    upload(req, res, function multerUpload(err) {
+        console.log("req inside upload------",req)
+        if(err) {
+            console.log(err)
+        } else{
+            if(req) {
+                multipleFile(req).then(element => {
+                    console.log("body-----------", req.body);
+                    console.log("element--------", element);
+                    req.body.images = element;
+                    console.log("req.body-----------", req.body)
+                    var restosData = new restos(req.body);
+                    console.log("restosData------------", restosData);
+                    restosData.save(function (err) {
+                        if (err) throw err;
+                    })
+                        .then(item => {
+                            res.send("Name saved to database");
+                        })
+                        .catch(err => {
+                            res.status(400).send("Unable to save to database");
+                        });
+                    //res.send("uploaded successfully")
+                }).catch(err => {
+                        console.log("error---------", err)
+                })
+            }  
+        }
     })
 });
+
+app.post('/addfooditem', function (req, res) {
+    console.log("req----------", req.files);
+    console.log(req.body);
+    var tmp_path;
+    upload(req, res, function multerUpload(err) {
+        console.log("req inside upload------", req)
+        if (err) {
+            console.log(err)
+        } else {
+            if (req.files) {
+                multipleFile(req).then(element => {
+                    console.log("body-----------", req.body);
+                    console.log("element--------", element);
+                    req.body.images = element;
+                    console.log("req.body-----------", req.body)
+                    var foodItemData = new foodItem(req.body);
+                    console.log("foodItem------------", foodItemData);
+                    foodItemData.save(function (err) {
+                        if (err) throw err;
+                    })
+                        .then(item => {
+                            res.send("Name saved to database");
+                        })
+                        .catch(err => {
+                            res.status(400).send("Unable to save to database");
+                        });
+                    //res.send("uploaded successfully")
+                }).catch(err => {
+                    console.log("error---------", err)
+                })
+            } else {
+                console.log("inside else--------")
+            }
+        }
+    })
+});
+
+app.get('/uploadimage', function (req, res) {
+    console.log("jhihhi");
+    res.render('uploadImages.ejs');
+    //res.sendFile(__dirname + '/addResto.html');
+});
+var imageUrl = [];
+
+app.post('/uploadimage',  function (req, res) {
+    console.log(req.images);
+    console.log(req.body);
+    var tmp_path;
+    upload(req, res, function multerUpload(err) {
+        // console.log("req inside upload------", req)
+
+        if (err) {
+            console.log(err)
+        } else {
+            multipleFile(req)
+                .then(element => {
+                    console.log("body-----------", req.body);
+                    console.log("element--------", element);
+                    res.send("uploaded successfully")
+                })
+                .catch(err => {
+                    console.log("error---------", err)
+                })
+        }
+    })
+
+   
+});
+
+multipleFile = function (req) {
+    return new Promise(function (resolve, reject) {
+        console.log("req.files---------", req.files)
+        async.forEachOf(req.files, function (element, i, callback) {
+            var data = element.buffer;
+            const fileName = element.originalname;
+            const mimeType = element.mimeType;
+
+            const s3Params = {
+                Bucket: S3_BUCKET,
+                Key: req.body.name + '/' + fileName,
+                Expires: 60,
+                Body: data,
+                ContentType: mimeType,
+                ACL: 'public-read'
+            };
+
+            s3.upload(s3Params, function (error, data) {
+                if (error) {
+                    winston.log("Error uploading data: ", error);
+                    console.log("Error uploading data: ", error);
+                    const returnData = {
+                        signedRequest: data,
+                        url: `https://${S3_BUCKET}.s3.amazonaws.com/${fileName}`
+                    };
+                    res.write(JSON.stringify(returnData));
+                    reject(error);
+                } else {
+                    console.log("response--------------", data);
+                    winston.log("Successfully uploaded data to myBucket/myKey");
+                    console.log("Successfully uploaded data to myBucket/myKey");
+                    imageUrl[i] = data.Location;
+                    console.log(imageUrl, "imageUrl------")
+                    //res.send("Image saved to database");
+                }
+                callback();
+            });            
+        }, function (err) {
+            if (err){
+                reject(err)
+            }
+            else{
+                console.log("inside callback--------")
+                resolve(imageUrl);
+            }
+        });
+    });
+} 
 
 function isLoggedIn(req, res, next) {
     if (req.isAuthenticated())

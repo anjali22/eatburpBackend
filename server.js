@@ -6,13 +6,13 @@ var fileparser = require('connect-multiparty')();
 var router = express.Router();
 var passport = require('passport');
 var flash    = require('connect-flash');
-
+var routes = require('./app/routes');
 var morgan       = require('morgan');
 var cookieParser = require('cookie-parser');
 var session      = require('express-session');
 
 var fs = require("fs");
-var uri = 'mongodb://admin:admin@ds251985.mlab.com:51985/eatburp';
+var uri = 'mongodb://eatburp:eatburp01@ds251985.mlab.com:51985/eatburp';
 var path = require('path'),
 fs = require('fs');
 
@@ -72,7 +72,14 @@ db.once('open', function() {
 
 console.log("connected or not???",mongoose.connection.readyState);
 
-
+app.use(function (req, res, next) {
+    //set headers to allow cross origin request.
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS');
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    next();
+});
+//app.use('/', routes);
 // routes ======================================================================
 require('./app/routes.js')(app, passport); // load our routes and pass in our app and fully configured passport
 

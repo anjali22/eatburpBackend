@@ -8,7 +8,9 @@
     	<h1>Upload Photos</h1>
 
     	<form id = "uploadForm" enctype = "multipart/form-data" action = "/uploadimage" method = "post">
-            <input type="file" name="image" />
+            <input type="file" name="photo" multiple />
+                  <input type='text' id='random' name='random'><br>
+
             <input type="submit" value="Upload Image" name="submit"/>
             </form>
 

@@ -41,6 +41,13 @@ db.once('open', function() {
 
 console.log("connected or not???",mongoose.connection.readyState);
 
+app.use(function (req, res, next) {
+    //set headers to allow cross origin request.
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS');
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    next();
+});
 // process the login form
 app.post('/login', passport.authenticate('local-login', {
     successRedirect : '/profile', // redirect to the secure profile section
@@ -181,15 +188,28 @@ app.post("/addResto", (req, res) => {
         });
 });
 
-app.get("/searchResto", (req,res) => {
+/** Search restaurant and return just there id and name. */
+app.get("/searchRestoName", (req,res) => {
     console.log("searching");
-    restos.find( 
+    restos.find({},{name: 1}, 
             function (err, resto) {
                 if (err) return console.error(err);
-                console.log("resto----------", resto);
-                res.json({ docs: resto })
+                //console.log("resto----------", resto);
+                //res.json({ docs: resto })
+                res.send(JSON.stringify({"results":resto}));
             }
         );
+});
+
+app.get("/searchResto", (req, res) => {
+    console.log("searching");
+    restos.find({},
+        function (err, resto) {
+            if (err) return console.error(err);
+            console.log("resto----------", resto);
+            res.json({ docs: resto })
+        }
+    );
 });
 
 /*---------------------- end of resto data --------------*/
@@ -232,7 +252,7 @@ app.get("/getFoodItems",(req,res) => {
 
 app.get("/searchItem", (req,res) => {
     console.log("searching");
-    items.find( 
+    items.find(
             function (err, item) {
                 if (err) return console.error(err);
                 console.log("item----------", item);
@@ -271,28 +291,28 @@ app.post("/addReview", (req, res) => {
         if(err){
             console.log("erroe--------", err);
         } else{
-            console.log("restaurant details", restaurant[0]);
+            console.log("restaurant details", restaurant);
             resto_item_rating_Data.resto_id = restaurant[0]._id;
         }
     });
 
-    items.find({'name': req.body.itemName}, (err, item) => {
+    items.findOneAndUpdate({ 'name': req.body.itemName }, { 'name': req.body.itemName }, { upsert: true, new: true }, (err, item) => {
         if(err){
             console.log("erroe--------", err);
         } else{
-            console.log("item details", item[0]);
-            resto_item_rating_Data.item_id = item[0]._id;
+            console.log("item details", item);
+            resto_item_rating_Data.item_id = item._id;
         }
     });
 
 
 
-    users.find({'unique_name': req.body.userName}, (err, user) => {
+    users.find({'email': req.body.userName}, (err, user) => {
         if(err) {
             console.log("Could not get the user with this name", err)
         } else{
-            //console.log("user id", user._id);
-            reviewData.user_id = user[0]._id;
+            console.log("user id", user);
+            //reviewData.user_id = user[0]._id;
             console.log("reviewData------------", reviewData);
             reviewData.save(function(err, review){
                 if (err) throw err;
@@ -336,16 +356,16 @@ app.post("/addReview", (req, res) => {
 //Add Rating/Review
 var restoItemSchema = new mongoose.Schema({
     id: Number,
-    resto_id: Number,
+    resto_id: String,
     //item_id: {id: mongoose.Schema.Types.ObjectId, name: String },
-    item_id: Number,
+    item_id: String,
     //review_id: [mongoose.Schema.Types.ObjectId],
     cost: Number,
     //user_id: mongoose.Schema.Types.ObjectId,
     //review_id:{id: [mongoose.Schema.Types.ObjectId], rating: [Number]},
     avg_rating: Number,
 });
-var resto_item_rating = mongoose.model("resto_item_rating", restoItemSchema);
+var resto_item_rating = mongoose.model("resto_item", restoItemSchema);
 
 app.get('/addReview', function(req, res){
         console.log("jhihhi");
@@ -369,7 +389,7 @@ app.post("/addReview", (req, res) => {
 
 app.get("/searchReview", (req,res) => {
     console.log("searching");
-    resto_item_rating.find( 
+    resto_item_rating.find({},
             function (err, item) {
                 if (err) return console.error(err);
                 console.log("item----------", item);
@@ -378,11 +398,13 @@ app.get("/searchReview", (req,res) => {
         );
 });
 
+/** feeding menu of a restaurant */
+app.post("/addMenu", (req, res) => {
+    console.log(req.body);
+    res.send("added");
+})
+
 /*---------------------- end of item data --------------*/
-
-
-
-
 
 app.listen(port, () => {
     console.log("Server listening on port " + port);
