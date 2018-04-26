@@ -15,14 +15,22 @@
     "connect-flash": "^0.1.1",
     "connect-multiparty": "^2.1.0",
     "cookie-parser": "^1.4.3",
+<<<<<<< HEAD
     "cookie-session": "^2.0.0-beta.3",
+=======
+    "dotenv": "^5.0.1",
+>>>>>>> 7a01dbbb2c95959ca45146cf6f46a415b5955233
     "ejs": "^2.5.7",
     "express": "^4.16.3",
     "express-fileupload": "^0.3.0",
     "express-session": "^1.15.6",
     "fast-csv": "^2.4.1",
     "file-system": "^2.2.2",
+<<<<<<< HEAD
     "geolib": "^2.0.24",
+=======
+    "fs": "0.0.1-security",
+>>>>>>> 7a01dbbb2c95959ca45146cf6f46a415b5955233
     "method-override": "^2.3.10",
     "moment": "^2.19.1",
     "mongoosastic": "^4.3.0",
