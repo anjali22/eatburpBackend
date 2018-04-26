@@ -137,7 +137,6 @@ module.exports = function(app, passport) {
 app.get('/addItem', function(req, res){
     console.log("jhihhi");
     res.render('addItem.ejs');
-//res.sendFile(__dirname + '/addItem.html');
 });
 
 app.post("/addItem", (req, res) => {
@@ -163,7 +162,6 @@ itemsData.save(function(err){
 app.get('/addResto', function(req, res){
     console.log("jhihhi");
     res.render('addResto.ejs');
-//res.sendFile(__dirname + '/addResto.html');
 });
 
 app.post("/addResto", (req, res) => {
@@ -184,7 +182,6 @@ restosData.save(function(err){
 app.get('/uploadimage', function(req, res){
     console.log("jhihhi");
     res.render('uploadImages.ejs');
-//res.sendFile(__dirname + '/addResto.html');
 });
 
 var s3 = new AWS.S3();
@@ -200,10 +197,7 @@ var upload1 = multer({
         key: function (req, file, cb) {
           cb(null, Date.now().toString())
         }
-        // key: function (req, file, cb) {
-        //     console.log(file);
-        //     cb(null, file.originalname); //use Date.now() for unique file keys
-        // }
+
     })
 });
 
@@ -226,32 +220,6 @@ app.post('/uploadimage', type, function (req, res) {
       var target_path = 'uploads/' + req.file.originalname;
       console.log(req.file,'reqqqqqqqqqqqqqqqqqqqqqqqqqq');
       console.log(req.file.originalname);
-    //   fs.readFile(tmp_path, function(err, data)
-    //   {
-    //     fs.writeFile(target_path, data, function (err)
-    //     {
-    //       res.render('complete');
-    //     })
-    // });
-
-    // console.log(req,"upload imageeeeeee");
-    // winston.log(req,"upload imageeeeeee");
-
-    // const fileName = req.body['file-name'];
-    // console.log(fileName,"upload imageeeeeee");
-    // console.log(req.body,"bodyyyyyyyyyyyyyyyyyyyyy");
-    // console.log(req.params,"paramssssssssssssssss");
-    // console.log(req.query,"queryyyyyyyyyyyyyyyyyy");
-    // console.log(req.files,"filesssssssssssssssssss");
-    // winston.log(req.files,"filesssssssssss");
-    
-    // //winston.log(req.body);
-    // winston.log(req.params);
-    // winston.log(fileName,"upload imageeeeeee");
-
-    // const fileType = req.query['file-type'];
-    // console.log(fileType,"upload imageeeeeee");
-    // winston.log(fileType,"upload imageeeeeee");
 
     const fileName = req.file.originalname;
     const mimeType = req.file.mimeType;
@@ -280,32 +248,7 @@ app.post('/uploadimage', type, function (req, res) {
             res.send("Image saved to database");
         }
     });
-    // s3.getSignedUrl('putObject', s3Params, (err, data) => {
-    //   if(err){
-    //     console.log(err);
-    //     return res.end();
-    //   }
-    //   const returnData = {
-    //     signedRequest: data,
-    //     url: `https://${S3_BUCKET}.s3.amazonaws.com/${fileName}`
-    //   };
-    //   res.write(JSON.stringify(returnData));
-    //   res.end();
-    // });
-//      // store an img in binary in mongo
-//      var a = new A;
-//      a.img.data = fs.readFileSync(imgPath);
-//      a.img.contentType = 'image/png';
-//      a.save(function (err, a) {
-//        if (err) throw err;
- 
-//     console.error('saved img to mongo');
-// }).then(item => {
-//     res.send("image saved to database");
-// })
-// .catch(err => {
-//     res.status(400).send("Unable to save image to database");
-// });
+
 
 });
 

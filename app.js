@@ -158,8 +158,20 @@ app.get("/searchUser", (req,res) => {
 var restoSchema = new mongoose.Schema({
     name: String,
     locality: String,
+    address: String,
+    category: String,
+    cuisine: String,
+    cost_for_two: Number,
+    hours: String
 });
+
 var restos = mongoose.model("restaurants", restoSchema);
+
+app.get("/getRestaurants",(req,res) => {
+    restos.find(function(err, resto) {
+        res.json({ docs: resto })
+     });
+});
 
 app.get('/addResto', function(req, res){
         console.log("jhihhi");
@@ -191,6 +203,7 @@ app.get("/searchResto", (req,res) => {
             }
         );
 });
+
 
 /*---------------------- end of resto data --------------*/
 
@@ -226,19 +239,35 @@ app.post("/addItem", (req, res) => {
 
 app.get("/getFoodItems",(req,res) => {
     items.find(function(err, users) {
-        console.log(users);
+        res.json({ docs: users })
+        //res.send(users);
      });
 });
 
 app.get("/searchItem", (req,res) => {
-    console.log("searching");
-    items.find( 
-            function (err, item) {
-                if (err) return console.error(err);
-                console.log("item----------", item);
-                res.json({ docs: item })
-            }
-        );
+    // console.log("searching");
+    // items.find( 
+    //         function (err, item) {
+    //             if (err) return console.error(err);
+    //             console.log("item----------", item);
+
+    //             res.send(item);
+    //             //res.json({ docs: item })
+    //         }
+    //     );
+    var response = {
+        "title": "The Basics - Networking",
+        "description": "Your app fetched this from a remote endpoint!",
+        "movies": [
+          { "title": "Star Wars", "releaseYear": "1977"},
+          { "title": "Back to the Future", "releaseYear": "1985"},
+          { "title": "The Matrix", "releaseYear": "1999"},
+          { "title": "Inception", "releaseYear": "2010"},
+          { "title": "Interstellar", "releaseYear": "2014"}
+        ]
+      }
+      res.send(response);
+      
 });
 
 /*---------------------- end of item data --------------*/
@@ -260,7 +289,8 @@ app.get('/addReview', function(req, res){
   });
 
 app.post("/addReview", (req, res) => {
-    var reviewData = new reviews(req.body);
+    //var reviewData = new reviews(req.body);
+    var reviewData = req.body;
     var resto_item_rating_Data = new resto_item_rating();
 
     console.log("rreview data----------", reviewData);
@@ -335,17 +365,19 @@ app.post("/addReview", (req, res) => {
 
 //Add Rating/Review
 var restoItemSchema = new mongoose.Schema({
-    id: Number,
-    resto_id: Number,
+    //id: Number,
+    resto_id: String,
     //item_id: {id: mongoose.Schema.Types.ObjectId, name: String },
-    item_id: Number,
-    //review_id: [mongoose.Schema.Types.ObjectId],
+    item_id: String,
+    //review_id: String,
     cost: Number,
     //user_id: mongoose.Schema.Types.ObjectId,
     //review_id:{id: [mongoose.Schema.Types.ObjectId], rating: [Number]},
     avg_rating: Number,
+
+
 });
-var resto_item_rating = mongoose.model("resto_item_rating", restoItemSchema);
+var resto_item_rating = mongoose.model("resto_item_ratings", restoItemSchema);
 
 app.get('/addReview', function(req, res){
         console.log("jhihhi");
@@ -367,6 +399,18 @@ app.post("/addReview", (req, res) => {
         });
 });
 
+app.get("/getTopRestaurants", ( req, res) => {
+    console.log(req.body, " get top restaurant  ");
+    var foodId = req.body.foodId;
+    resto_item_rating.find( {item_id: "5a47439fce31f73679d3e5be"}, function (err, item) {
+            if (err) return console.error(err);
+            console.log("item----------", item);
+            res.json({ docs: item })
+        }
+    );
+
+});
+
 app.get("/searchReview", (req,res) => {
     console.log("searching");
     resto_item_rating.find( 
@@ -381,8 +425,104 @@ app.get("/searchReview", (req,res) => {
 /*---------------------- end of item data --------------*/
 
 
+/*----------------------- google maps-------------------*/
+let jsonData = require('./data/restaurants2.json');
+var request = require('request');
+const key = " AIzaSyCyoaI8dLQXdbax24-J2SaH6kJoFQJXypc ";
+const keySurbhi = "AIzaSyBsMwfs-6DFGEOIU7qSaEOz5Z6pYFayDFU";
+const url = "https://maps.googleapis.com/maps/api/geocode/json?address=1600+Amphitheatre+Parkway,+Mountain+View,+CA&key=YOUR_API_KEY"; 
+var csv = require('fast-csv');
+//var fs = require('fs');
+var lat = new Array();
+var lng = new Array();
+var name = new Array();
+var async = require('async');
+app.get("/getCoordinates", (req,res) => {
 
+    var csvstream = csv.createWriteStream({headers: true});
+    var writableStream = fs.createWriteStream("./test.csv"); 
+    csvstream.pipe(writableStream);
 
+    async.forEachOf(jsonData, function(value, i, callback) {
+        var url = 'https://maps.googleapis.com/maps/api/geocode/json?address='+value.address+',Indore&key=AIzaSyBsMwfs-6DFGEOIU7qSaEOz5Z6pYFayDFU';
+        apicall(url, value.name, callback);
+        
+    }, function(err) {
+        for( i =0;i<jsonData.length;i++){
+                csvstream.write({
+                    name: name[i],
+                    latitude: lat[i],
+                    longitude: lng[i]
+                })
+            }
+        console.log('this is callback------')
+    });
+
+    function apicall(url,resto, callback) {
+        //console.log('url------', url)
+        
+        request(url, function (error, response, results) {
+            var obj = {};
+            //console.log('name------', jsonData[i].name);
+            obj = JSON.parse(results);
+            if (!error && obj.status === 'OK') {
+              //console.log(body);
+              
+              //console.log('obj-----', obj)
+              name.push(resto);
+              lat.push(obj.results[0].geometry.location.lat);  
+              lng.push(obj.results[0].geometry.location.lng);
+              console.log('lat------', lat, 'lng--------', lng, 'name------', name);
+              callback();
+              //console.log('location array---', location);
+            } else {
+                name.push(resto);
+                lat.push(0);  
+                lng.push(0);
+                callback();
+            }
+        });
+        
+    }
+//     let url='https://maps.googleapis.com/maps/api/geocode/json?address='+'13, Regency Arcade, Navratan Bagh, Geeta Bhavan, Indore'+'&key=AIzaSyCyoaI8dLQXdbax24-J2SaH6kJoFQJXypc';
+//         request(url, function (error, response, results) {
+//         //     var obj = {};
+//             obj = JSON.parse(results);
+//             if (!error && response.statusCode == 200) {
+//                console.log(obj.results[0].geometry.location.lat); 
+// //csvstream.write({ name: })
+//             }
+//           });
+    //console.log(jsonData);
+
+    // for( i =0;i<4;i++){
+    //     console.log('jsonData-------', jsonData[i])
+    //     let url='https://maps.googleapis.com/maps/api/geocode/json?address='+jsonData[i].address+'&key=AIzaSyCyoaI8dLQXdbax24-J2SaH6kJoFQJXypc';
+    //     request(url, function (error, response, results) {
+    //         if (!error && response.statusCode == 200) {
+    //           //console.log(body);
+    //           var obj = {};
+    //           console.log('name------', jsonData[i].name);
+    //           obj = JSON.parse(results);
+    //           console.log('obj-----', obj)
+    //           lat.push(obj.results[0].geometry.location.lat);  
+    //           lng.push(obj.results[0].geometry.location.lng);
+    //           console.log('lat------', lat, 'lng--------', lng);
+    //           //console.log('location array---', location);
+    //         }
+    //     });
+    // //console.log(jsonData[i].name);
+    // }
+    //     for( i =0;i<4;i++){
+    //         csvstream.write({
+    //             name: jsonData[i].name,
+    //             latitude: lat[i],
+    //             longitude: lng[i]
+    //         })
+    //     }
+   
+
+});
 
 app.listen(port, () => {
     console.log("Server listening on port " + port);
