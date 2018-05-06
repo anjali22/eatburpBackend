@@ -247,6 +247,7 @@ app.post("/addItem", (req, res) => {
 app.get("/getFoodItems",(req,res) => {
     items.find(function(err, users) {
         console.log(users);
+        res.json({docs: users});
      });
 });
 

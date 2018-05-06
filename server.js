@@ -7,6 +7,7 @@ var router = express.Router();
 var passport = require('passport');
 var flash    = require('connect-flash');
 var routes = require('./app/routes');
+var foodItemAPI = require('./app/foodItemAPI');
 var morgan       = require('morgan');
 var cookieParser = require('cookie-parser');
 var session      = require('express-session');
@@ -37,28 +38,12 @@ app.use(flash()); // use connect-flash for flash messages stored in session
     
  app.use(bodyParser.json());
  app.use(bodyParser.urlencoded({ extended: true }));
- //app.use(bodyParser({uploadDir:'/path/to/temporary/directory/to/store/uploaded/files'}));
-// // required for passport
-// app.use(session({ secret: 'iloveatburp' })); // session secret
-// app.use(passport.initialize());
-// app.use(passport.session()); // persistent login sessions
-// app.use(flash()); // use connect-flash for flash messages stored in session
+ 
 require('./config/passport')(passport); // pass passport for configuration
-//app.use(express.static(__dirname + '/addUser.'));
-
-
-// // set up our express application
-// app.use(morgan('dev')); // log every request to the console
-// app.use(cookieParser()); // read cookies (needed for auth)
-// app.use(bodyParser()); // get information from html forms
-
-// app.set('view engine', 'ejs'); // set up ejs for templating
-
 
 var mongoose = require("mongoose");
 mongoose.Promise = global.Promise;
 
-//mongoose.connect("mongodb://localhost:27017/eatBurp");
 mongoose.connect(uri, {
     useMongoClient: true,
     
@@ -79,13 +64,22 @@ app.use(function (req, res, next) {
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
     next();
 });
-//app.use('/', routes);
-// routes ======================================================================
-require('./app/routes.js')(app, passport); // load our routes and pass in our app and fully configured passport
 
-// app.listen(port, () => {
-//     console.log("Server listening on port " + port);
-// });
+// s3 setup
+var AWS = require('aws-sdk');
+var dotenv = require('dotenv');
+dotenv.config();
+
+AWS.config.update({
+    region: 'us-east-2',
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+});
+
+// routes ======================================================================
+require('./app/routes.js')(app, passport, AWS); // load our routes and pass in our app and fully configured passport
+require('./app/foodItemAPI.js')(app);
+require('./app/s3ImageSaving');
 
 app.listen(process.env.PORT || 3000, function(){
     console.log('listening on', port);

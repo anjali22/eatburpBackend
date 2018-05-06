@@ -1,5 +1,4 @@
 var mongoose = require('mongoose');
-var bcrypt   = require('bcrypt-nodejs');
 
 //restaurant data
 var restoSchema = new mongoose.Schema({
