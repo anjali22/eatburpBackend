@@ -79,23 +79,6 @@ module.exports = function(app, passport, AWS) {
             failureFlash : true // allow flash messages
         }));
 
-        // SIGNUP =================================
-        // show the signup form
-        app.get('/signup', function(req, res) {
-            res.render('signup.ejs', { message: req.flash('signupMessage') });
-        });
-
-        // process the signup form
-        app.post('/signup', passport.authenticate('local-signup', {
-            successRedirect : '/profile', // redirect to the secure profile section
-            failureRedirect : '/signup', // redirect back to the signup page if there is an error
-            failureFlash : true // allow flash messages
-        }));
-
-    // =============================================================================
-    // AUTHORIZE (ALREADY LOGGED IN / CONNECTING OTHER SOCIAL ACCOUNT) =============
-    // =============================================================================
-
     // locally --------------------------------
     app.get('/connect/local', function(req, res) {
         res.render('connect-local.ejs', { message: req.flash('loginMessage') });
@@ -214,11 +197,24 @@ module.exports = function(app, passport, AWS) {
         })
     });
 
+    app.get("/getMyReviews", (req, res) => {
+        var token = req.headers['x-access-token'];
+        if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
+
+        jwt.verify(token, process.env.JWT_SECRET, function (err, decoded) {
+            if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
+            else {
+                console.log('decoded-----------', decoded);
+                user_id = decoded._id
+            }
+        });
+    })
+
     app.post("/addReview", (req, res) => {
         console.log("req----------", req.files);
         console.log(req.body);
         upload(req, res, function multerUpload(err) {
-            console.log("req inside upload------", req)
+            //console.log("req inside upload------", req)
             if (err) {
                 console.log(err)
             } else {
@@ -233,27 +229,50 @@ module.exports = function(app, passport, AWS) {
 
                         console.log(req.body)
 
-                        //get user_id from user collection
-                        restos.find({ 'name': req.body.restaurantName }, (err, restaurant) => {
-                            if (err) {
-                                console.log("erroe--------", err);
-                            } else {
-                                console.log("restaurant details", restaurant);
-                                resto_item_rating_Data.resto_id = restaurant[0]._id;
+                        //get restaurant details
+                        restos.findOneAndUpdate(
+                            { 'name': req.body.restaurantName }, 
+                            { 'name': req.body.restaurantName }, 
+                            { upsert: true, new: true }, 
+                            (err, restaurant) => {
+                                if (err) {
+                                    console.log("error--------", err);
+                                } else {
+                                    console.log("restaurant details", restaurant);
+                                    resto_item_rating_Data.resto_id = restaurant[0]._id;
+                                }
                             }
-                        });
-
-                        foodItem.findOneAndUpdate({ 'name': req.body.foodItem }, { 'name': req.body.foodItem, 'images': element }, { upsert: true, new: true }, (err, item) => {
-                            if (err) {
-                                console.log("erroe--------", err);
-                            } else {
-                                console.log("item details", item);
-                                resto_item_rating_Data.item_id = item._id;
+                        );
+                        //get food item. if does not exist than add one
+                        foodItem.findOneAndUpdate(
+                            { 'name': req.body.foodItem }, 
+                            { 'name': req.body.foodItem, 'images': element }, 
+                            { upsert: true, new: true }, 
+                            (err, item) => {
+                                if (err) {
+                                    console.log("erroe--------", err);
+                                } else {
+                                    console.log("item details", item);
+                                    resto_item_rating_Data.item_id = item._id;
+                                }
                             }
-                        });
+                        );
 
                         reviewData.imageUrl = element;
+                        var user_id;
+                        var token = req.headers['x-access-token'];
+                        if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
+                            
+                        jwt.verify(token, process.env.JWT_SECRET, function (err, decoded) {
+                            if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
+                            else {
+                                console.log('decoded-----------', decoded);
+                                user_id = decoded._id
+                            }
+                        });
 
+                        reviewData.user_id = user_id;
+                        console.log("reviewData------------", reviewData);
                         reviewData.save(function (err, review) {
                             if (err) throw err;
                             else {
@@ -262,50 +281,42 @@ module.exports = function(app, passport, AWS) {
                                 console.log("resto_item_rating_Data------", resto_item_rating_Data)
                             }
                         })
-                            .then(item => {
-                                //res.send("Name saved to database");
-                                resto_item_rating_Data.save((err, data) => {
+                        .then(item => {
+                            //res.send("Name saved to database");
+                            /* resto_item_rating_Data.save((err, data) => {
+                                if (err) {
+                                    console.log("error in storing resto item data", err);
+                                } else {
+                                    console.log("stored data-------", data);
+                                    res.status(200).json({
+                                        success: "review saved to database."
+                                    })
+                                }
+                            }) */
+                            
+                            resto_item_rating_Data.findAndModify(
+                                { $and:[
+                                    { 'resto_id': resto_item_rating_Data.resto_id },
+                                    { 'item_id': resto_item_rating_Data.item_id }
+                                ]},
+                                {
+                                    review_id: resto_item_rating_Data.review_id
+                                },
+                                function (err, result) {
                                     if (err) {
                                         console.log("error in storing resto item data", err);
                                     } else {
-                                        console.log("stored data-------", data);
-                                    }
-                                })
-                            })
-                            .catch(err => {
-                                res.status(400).send("Unable to save to database");
-                            });
-
-                        /* users.find({ 'email': req.body.userName }, (err, user) => {
-                            if (err) {
-                                console.log("Could not get the user with this name", err)
-                            } else {
-                                console.log("user id", user);
-                                //reviewData.user_id = user[0]._id;
-                                console.log("reviewData------------", reviewData);
-                                reviewData.save(function (err, review) {
-                                    if (err) throw err;
-                                    else {
-                                        console.log("review id------", review._id);
-                                        resto_item_rating_Data.review_id = review._id;
-                                        console.log("resto_item_rating_Data------", resto_item_rating_Data)
-                                    }
-                                })
-                                    .then(item => {
-                                        //res.send("Name saved to database");
-                                        resto_item_rating_Data.save((err, data) => {
-                                            if (err) {
-                                                console.log("error in storing resto item data", err);
-                                            } else {
-                                                console.log("stored data-------", data);
-                                            }
+                                        console.log("stored data-------", result);
+                                        res.status(200).json({
+                                            success: "review saved to database."
                                         })
-                                    })
-                                    .catch(err => {
-                                        res.status(400).send("Unable to save to database");
-                                    });
-                            }
-                        }); */
+                                    }
+                                }
+                            )
+                        })
+                        .catch(err => {
+                            res.status(400).send("Unable to save to database");
+                        });
                     }).catch(err => {
                         console.log("error---------", err)
                     })
@@ -313,51 +324,105 @@ module.exports = function(app, passport, AWS) {
                     console.log("inside else--------");
                     console.log("req.body-----------", req.body)
                     var reviewData = new reviewSchema(req.body);
-                    var resto_item_rating_Data = new restoItemSchema();
-
+                    //var resto_item_rating_Data = new restoItemSchema();
+                    var resto_id, item_id, review_id;
                     console.log(req.body)
 
                     //get user_id from user collection
-                    restos.find({ 'name': req.body.restaurantName }, (err, restaurant) => {
-                        if (err) {
-                            console.log("erroe--------", err);
-                        } else {
-                            console.log("restaurant details", restaurant);
-                            resto_item_rating_Data.resto_id = restaurant[0]._id;
+                    restos.findOneAndUpdate(
+                        { 'name': req.body.restaurantName },
+                        { 'name': req.body.restaurantName },
+                        { upsert: true, new: true },
+                        (err, restaurant) => {
+                            if (err) {
+                                console.log("error--------", err);
+                            } else {
+                                console.log("restaurant details", restaurant);
+                                resto_item_rating_Data.resto_id = restaurant[0]._id;
+                            }
+                        }
+                    );
+
+                    foodItem.findOneAndUpdate(
+                        { 'name': req.body.foodItem }, 
+                        { 'name': req.body.foodItem }, 
+                        { upsert: true, new: true }, 
+                        (err, item) => {
+                            if (err) {
+                                console.log("erroe--------", err);
+                            } else {
+                                console.log("item details", item);
+                                item_id = item._id;
+                            }
+                        }
+                    );
+                    var user_id;
+                    console.log('headers---------', req.headers)
+                    var token = req.headers['x-access-token'];
+                    if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
+
+                    jwt.verify(token, process.env.JWT_SECRET, function (err, decoded) {
+                        if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
+                        else {
+                            console.log('decoded-----------', decoded);
+                            user_id = decoded._id
                         }
                     });
 
-                    foodItem.findOneAndUpdate({ 'name': req.body.foodItem }, { 'name': req.body.foodItem }, { upsert: true, new: true }, (err, item) => {
-                        if (err) {
-                            console.log("erroe--------", err);
-                        } else {
-                            console.log("item details", item);
-                            resto_item_rating_Data.item_id = item._id;
-                        }
-                    });
+                    reviewData.user_id = user_id;
 
                     reviewData.save(function (err, review) {
                         if (err) throw err;
                         else {
                             console.log("review id------", review._id);
-                            resto_item_rating_Data.review_id = review._id;
-                            console.log("resto_item_rating_Data------", resto_item_rating_Data)
+                            //review_id = review._id;
+                            //console.log("resto_item_rating_Data------", resto_item_rating_Data)
                         }
                     })
-                        .then(item => {
-                            //res.send("Name saved to database");
-                            resto_item_rating_Data.save((err, data) => {
+                    .then(item => {
+                        console.log('here-------------', item)
+                        review_id = item._id;
+                        //res.send("Name saved to database");
+                       /*  resto_item_rating_Data.save((err, data) => {
+                            if (err) {
+                                console.log("error in storing resto item data", err);
+                            } else {
+                                console.log("stored data-------", data);
+                                res.send(data)
+                            }
+                        }) */
+                        restoItemSchema.findOneAndUpdate(
+                            {
+                                $and: [
+                                    { 'resto_id': resto_id },
+                                    { 'item_id': item_id }
+                                ]
+                            },
+                            {
+                                $push: {
+                                    review_id: review_id
+                                }
+                            },
+                            {
+                                upsert: true,
+                                new: true
+                            },
+                            function (err, result) {
                                 if (err) {
                                     console.log("error in storing resto item data", err);
                                 } else {
-                                    console.log("stored data-------", data);
+                                    console.log("stored data-------", result);
+                                    res.status(200).json({
+                                        success: "review saved to database."
+                                    })
                                 }
-                            })
-                        })
-                        .catch(err => {
-                            res.status(400).send("Unable to save to database");
-                        });
-
+                            }
+                        )
+                    })
+                    .catch(err => {
+                        res.status(400).send("Unable to save to database");
+                    });
+                    
                 }
             }
         })
@@ -378,8 +443,6 @@ module.exports = function(app, passport, AWS) {
         console.log(req.images);
         console.log(req.body);
         upload(req, res, function multerUpload(err) {
-            // console.log("req inside upload------", req)
-
             if (err) {
                 console.log(err)
             } else {
@@ -392,10 +455,9 @@ module.exports = function(app, passport, AWS) {
                     .catch(err => {
                         console.log("error---------", err)
                     })
-            }
+                }
         })
 
-    
     });
 
     app.get("/getRestaurants", (req, res) => {
@@ -404,18 +466,40 @@ module.exports = function(app, passport, AWS) {
         });
     });
 
-    app.post("/registerUser", (req,res) => {
-        var newUser = new users(req.body);
-        newUser.password = newUser.generateHash(req.body.password);
-        newUser.save(function (err) {
-            if (err) throw err;
+  /*   app.post("/signUp", (req,res) => {
+        users.findOne({email: req.body.email}, function (err, user) {
+            if(err) throw err;
+            if(user) {
+                res.status(400).json({
+                    error: "User already registered. Please login."
+                })
+            } else{
+                var newUser = new users(req.body);
+                console.log('newUser-----------', newUser);
+                newUser.password = newUser.generateHash(req.body.password);
+                newUser.save(function (err) {
+                    if (err) throw err;
+                })
+                .then(item => {
+                    console.log('item--------',item)
+                    const JWTToken = jwt.sign({
+                        _id: item._id
+                    },
+                    process.env.JWT_SECRET,
+                    {
+                        expiresIn: '2h'
+                    });
+                    res.status(200).json({
+                        success: 'Welcome to the JWT Auth',
+                        token: JWTToken
+                    });
+                })
+                .catch(err => {
+                    res.status(400).json({ error: "Unable to sign up." });
+                });
+            }
         })
-            .then(item => {
-                res.send("Name saved to database");
-            })
-            .catch(err => {
-                res.status(400).send("Unable to save to database");
-            });
+        
     });
 
     app.post("/signIn", (req, res) => {
@@ -424,21 +508,24 @@ module.exports = function(app, passport, AWS) {
             console.log(user);
            if(err) {
                res.send(err)
-           }
-          else if(!user) {
-               res.send("No user found")
-           }
-           else if (!validPassword(req.body.password, user[0].password)){
-                res.send("please enter a valid password")
-            }
-           else {
+           } else if(!user) {
+               res.status(401).json({
+                   error: 'Please register as new user'
+               });  
+            } else if (!validPassword(req.body.password, user[0].password)){
+               res.status(401).json({
+                   error: 'Please enter correct password'
+               });            
+            } else {
+                console.log('user-------', user[0]._id)
                const JWTToken = jwt.sign({
-                   _id: user._id
+                   _id: user[0]._id
                     },
-                   'secret',
+                   process.env.JWT_SECRET,
                    {
                        expiresIn: '2h'
                    });
+                console.log(JWTToken);
                res.status(200).json({
                    success: 'Welcome to the JWT Auth',
                    token: JWTToken
@@ -452,14 +539,14 @@ module.exports = function(app, passport, AWS) {
         var value = bcrypt.compareSync(password1, password);
         console.log(value);
         return value;
-    };
+    }; */
 
-    /* app.get("/getFoodItems", (req, res) => {
+    app.get("/getFoodItems", (req, res) => {
         foodItem.find(function (err, users) {
             res.json({ docs: users })
             //res.send(users);
         });
-    }); */
+    });
 
 
     multipleFile = function (req) {

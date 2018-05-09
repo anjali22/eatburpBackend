@@ -36,7 +36,7 @@ var logger = new winston.Logger({
 
 
 module.exports = function foodItemAPIs(app) {
-    require('./s3ImageSaving')();
+    var imageSaving = require('./s3ImageSaving')();
     //console.log('this is-----------', typeof(multipleFile.upload));
     app.get('/uploadimage', function (req, res) {
         console.log("jhihhi");
@@ -80,7 +80,7 @@ module.exports = function foodItemAPIs(app) {
                 console.log(err)
             } else {
                 if (req.files) {
-                    multipleFile(req).then(element => {
+                   imageSaving.multipleFile(req).then(element => {
                         console.log("body-----------", req.body);
                         console.log("element--------", element);
                         req.body.images = element;

@@ -8,7 +8,7 @@ var restoItemSchema = new mongoose.Schema({
     //review_id: [mongoose.Schema.Types.ObjectId],
     cost: Number,
     //user_id: mongoose.Schema.Types.ObjectId,
-    review_id: String,
+    review_id: [String],
     avg_rating: Number,
 });
 

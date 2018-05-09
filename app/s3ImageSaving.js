@@ -28,7 +28,10 @@ module.exports = function () {
     var upload = multer().array('photo', 25);
     const S3_BUCKET = process.env.S3_BUCKET;
 
-    multipleFile = function (req) {
+    var imageUrl = [];
+
+
+    function multipleFile (req) {
         return new Promise(function (resolve, reject) {
             console.log("req.files---------", req.files)
             async.forEachOf(req.files, function (element, i, callback) {

@@ -79,6 +79,7 @@ AWS.config.update({
 // routes ======================================================================
 require('./app/routes.js')(app, passport, AWS); // load our routes and pass in our app and fully configured passport
 require('./app/foodItemAPI.js')(app);
+require('./app/usersAPI.js')(app);
 require('./app/s3ImageSaving');
 
 app.listen(process.env.PORT || 3000, function(){
