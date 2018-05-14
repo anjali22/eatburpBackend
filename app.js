@@ -400,10 +400,7 @@ app.get("/searchReview", (req,res) => {
 });
 
 /** feeding menu of a restaurant */
-app.post("/addMenu", (req, res) => {
-    console.log(req.body);
-    res.send("added");
-})
+
 
 /*---------------------- end of item data --------------*/
 

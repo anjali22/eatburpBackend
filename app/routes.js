@@ -1,7 +1,7 @@
-var restos       = require('../app/models/restaurant');
-var foodItem = require('../app/models/foodItem');
+var restaurantSchema       = require('../app/models/restaurantSchema');
+var dishSchema = require('../app/models/dishSchema');
 var reviewSchema = require('../app/models/reviewSchema');
-var restoItemSchema = require('../app/models/restoItemSchema');
+var dishRestaurantMappingSchema = require('../app/models/dishRestaurantMappingSchema');
 
 var bodyParser = require('body-parser');
 var Promise = require('promise');
@@ -46,9 +46,9 @@ module.exports = function(app, passport, AWS) {
     });
 
     app.post("/addResto", (req, res) => {
-    var restosData = new restos(req.body);
-    console.log("restosData------------", restosData);
-    restosData.save(function(err){
+    var restaurantSchemaData = new restaurantSchema(req.body);
+    console.log("restosData------------", restaurantSchemaData);
+    restaurantSchemaData.save(function(err){
         if (err) throw err;
     })
         .then(item => {
@@ -73,37 +73,57 @@ module.exports = function(app, passport, AWS) {
         console.log("req----------",req.files);
         console.log(req.body);
         upload(req, res, function multerUpload(err) {
-            console.log("req inside upload------",req)
-            if(err) {
-                console.log(err)
-            } else{
-                if(req) {
-                    multipleFile(req).then(element => {
-                        console.log("body-----------", req.body);
-                        console.log("element--------", element);
-                        req.body.images = element;
-                        console.log("req.body-----------", req.body)
-                        var restosData = new restos(req.body);
-                        console.log("restosData------------", restosData);
-                        restosData.save(function (err) {
-                            if (err) throw err;
-                        })
-                            .then(item => {
-                                res.send("Name saved to database");
-                            })
-                            .catch(err => {
-                                res.status(400).send("Unable to save to database");
-                            });
-                        //res.send("uploaded successfully")
-                    }).catch(err => {
+            //console.log("req inside upload------",req)
+            console.log('building', req.body['address.building']);
+            restaurantSchema.find(
+                {
+                    $and: [
+                        {'name': req.body.name},
+                        {'address.building': req.body['address.building']}
+                    ]
+                }, 
+                (error) => {
+                    if (error) {
+                        console.log(error)
+                    }
+            })
+            .then(result => {
+                console.log('result------', result)
+                if(result.length !== 0) {
+                    console.log('already a entry in database---------');
+                    res.status(400).json({"message": "Please enter a new restaurant. this one already exsits"})
+                    // do nothing
+                }
+                else{
+                    console.log("now insert image along with data");
+                    if (req) {
+                        multipleFile(req).then(element => {
+                            console.log("body-----------", req.body);
+                            console.log("element--------", element);
+                            req.body.images = element;
+                            console.log("req.body-----------", req.body)
+                            var restaurantSchemaData = new restaurantSchema(req.body);
+                            //console.log("restosData------------", restosData);
+                            restaurantSchemaData.save((err, result) => {
+                                    if (err) {
+                                        console.log("erroe--------", err);
+                                        res.status(400).json({"message": err});
+                                    }
+                                    console.log("item details", result);
+                                    res.status(200).json({"message": "Successfully saved"});
+                                })
+                            //res.send("uploaded successfully")
+                        }).catch(err => {
                             console.log("error---------", err)
-                    })
-                }  
-            }
+                            res.status(500).json({"message": "error in saving data please report to technical team" + err})
+                        })
+                    }  
+                }
+            })
         })
     });
 
-    app.post('/addfooditem', function (req, res) {
+    app.post('/addDish', function (req, res) {
         console.log("req----------", req.files);
         console.log(req.body);
         upload(req, res, function multerUpload(err) {
@@ -117,9 +137,9 @@ module.exports = function(app, passport, AWS) {
                         console.log("element--------", element);
                         req.body.images = element;
                         console.log("req.body-----------", req.body)
-                        var foodItemData = new foodItem(req.body);
-                        console.log("foodItem------------", foodItemData);
-                        foodItemData.save(function (err) {
+                        var dishSchemaData = new dishSchema(req.body);
+                        console.log("Dish------------", dishSchemaData);
+                        dishSchemaData.save(function (err) {
                             if (err) throw err;
                         })
                             .then(item => {
@@ -173,7 +193,7 @@ module.exports = function(app, passport, AWS) {
                         user_id = decoded._id
                     }
                 });
-                var resto_id, item_id, review_id;
+                var restaurant_id, dish_id, review_id;
                // reviewData.user_id = user_id;
                 if (req.files) {
                     multipleFile(req).then(element => {
@@ -182,11 +202,11 @@ module.exports = function(app, passport, AWS) {
                         req.body.images = element;
                         console.log("req.body-----------", req.body)
                         var reviewData = new reviewSchema(req.body);
-                        var resto_item_rating_Data = new restoItemSchema();
+                        //var resto_item_rating_Data = new dishRestaurantMappingSchemaSchema();
 
                         async.parallel([
                             function getRestaurantId(callback) {
-                                restos.findOneAndUpdate(
+                                restaurantSchema.findOneAndUpdate(
                                     { 'name': req.body.restaurantName },
                                     { 'name': req.body.restaurantName },
                                     { upsert: true, new: true },
@@ -196,23 +216,23 @@ module.exports = function(app, passport, AWS) {
                                             callback(err);
                                         }
                                         console.log("restaurant details", restaurant);
-                                        resto_id = restaurant._id;
+                                        restaurant_id = restaurant._id;
                                         callback();
                                     }
                                 );
                             },
 
-                            function getFoodItemId(callback) {
-                                foodItem.findOneAndUpdate(
-                                    { 'name': req.body.foodItem },
-                                    { 'name': req.body.foodItem, 'images': element },                                    { upsert: true, new: true },
+                            function getDishId(callback) {
+                                dishSchema.findOneAndUpdate(
+                                    { 'name': req.body.dish },
+                                    { 'name': req.body.dish, 'images': element },                                    { upsert: true, new: true },
                                     (err, item) => {
                                         if (err) {
                                             console.log("erroe--------", err);
                                             callback(err);
                                         }
                                         console.log("item details", item);
-                                        item_id = item._id;
+                                        dish_id = item._id;
                                         callback();
                                     }
                                 );
@@ -230,18 +250,20 @@ module.exports = function(app, passport, AWS) {
                                 })
                             }
                         ],
-                            function savingReviewToRestoItemModel(err, result) {
+                            function savingReviewToDishRestaurantMappingModel(err, result) {
                                 if (err) {
                                     return next(err);
                                 }
-                                restoItemSchema.findOneAndUpdate(
+                                dishRestaurantMappingSchemaSchema.findOneAndUpdate(
                                     {
                                         $and: [
-                                            { 'resto_id': resto_id },
-                                            { 'item_id': item_id }
+                                            { 'restaurant_id': restaurant_id },
+                                            { 'dish_id': dish_id }
                                         ]
                                     },
                                     {
+                                        'restaurant_id': restaurant_id,
+                                        'dish_id': dish_id,
                                         $push: {
                                             review_id: review_id
                                         }
@@ -270,11 +292,11 @@ module.exports = function(app, passport, AWS) {
                     console.log("inside else--------");
                     console.log("req.body-----------", req.body)
                     var reviewData = new reviewSchema(req.body);
-                    //var resto_item_rating_Data = new restoItemSchema();
+                    //var resto_item_rating_Data = new dishRestaurantMappingSchemaSchema();
 
                     async.parallel([
                         function getRestaurantId(callback) {
-                            restos.findOneAndUpdate(
+                            restaurantSchema.findOneAndUpdate(
                                 { 'name': req.body.restaurantName },
                                 { 'name': req.body.restaurantName },
                                 { upsert: true, new: true },
@@ -284,16 +306,16 @@ module.exports = function(app, passport, AWS) {
                                         callback(err);
                                     } 
                                     console.log("restaurant details", restaurant);
-                                    resto_id = restaurant._id;
+                                    restaurant_id = restaurant._id;
                                     callback();
                                 }
                             );
                         },
 
-                        function getFoodItemId(callback) {
-                            foodItem.findOneAndUpdate(
-                                { 'name': req.body.foodItem },
-                                { 'name': req.body.foodItem },
+                        function getDishId(callback) {
+                            dishSchema.findOneAndUpdate(
+                                { 'name': req.body.dish },
+                                { 'name': req.body.dish },
                                 { upsert: true, new: true },
                                 (err, item) => {
                                     if (err) {
@@ -301,7 +323,7 @@ module.exports = function(app, passport, AWS) {
                                         callback(err);
                                     } 
                                     console.log("item details", item);
-                                    item_id = item._id;
+                                    dish_id = item._id;
                                     callback();
                                 }
                             );
@@ -319,15 +341,15 @@ module.exports = function(app, passport, AWS) {
                             })
                         }
                     ], 
-                        function savingReviewToRestoItemModel(err, result) {
+                        function savingReviewToDishRestaurantMappingModel(err, result) {
                             if(err) {
                                 return next(err);
                             }
-                            restoItemSchema.findOneAndUpdate(
+                            dishRestaurantMappingSchemaSchema.findOneAndUpdate(
                                 {
                                     $and: [
-                                        { 'resto_id': resto_id },
-                                        { 'item_id': item_id }
+                                        { 'restaurant_id': restaurant_id },
+                                        { 'dish_id': dish_id }
                                     ]
                                 },
                                 {
@@ -389,14 +411,14 @@ module.exports = function(app, passport, AWS) {
     });
 
     app.get("/getRestaurants", (req, res) => {
-        restos.find(function (err, resto) {
+        restaurantSchema.find(function (err, resto) {
             res.json({ docs: resto })
         });
     });
 
 
-    app.get("/getFoodItems", (req, res) => {
-        foodItem.find(function (err, users) {
+    app.get("/getDishes", (req, res) => {
+        dishSchema.find(function (err, users) {
             res.json({ docs: users })
             //res.send(users);
         });
@@ -413,7 +435,7 @@ module.exports = function(app, passport, AWS) {
 
                 const s3Params = {
                     Bucket: S3_BUCKET,
-                    Key: req.body.name || req.body.foodItem + '/' + fileName,
+                    Key: req.body.name || req.body.dish_name + '/' + fileName,
                     Expires: 60,
                     Body: data,
                     ContentType: mimeType,
@@ -451,6 +473,105 @@ module.exports = function(app, passport, AWS) {
             });
         });
     } 
+
+    app.post("/addMenu", (req, res) => {
+        console.log(req.body);
+        async.forEachOf(req.body.inputFields, function (inputField, index, callback) {
+            /** Check whether that food item is already stored or not in food item collection. 
+             * Only if not then store new one otherwise pick the id already stored */
+            dishSchema.findOneAndUpdate(
+                { 'dish_name': inputField.dish_name },
+                {
+                    'dish_name': inputField.dish_name,
+                    'cuisine': inputField.cuisine,
+                    'meal': inputField.meal,
+                    'search_tag': inputField.search_tag,
+                    'type': inputField.type
+                },
+                {
+                    upsert: true,
+                    new: true
+                }
+            )
+                .then(item => {
+                    dishRestaurantMappingSchemaSchema.findOneAndUpdate(
+                        {
+                            $and: [
+                                {'restaurant_id': req.body.restoName},
+                                {'dish_id': item._id}
+                            ]
+                        },
+                        {
+                            'restaurant_id': req.body.restoName,
+                            'dish_id': item._id,
+                            'price': inputField.price,
+                            'dish_category': inputField.menu_category
+                        },
+                        {
+                            upsert: true,
+                            new: true
+                        },
+                        function (err, result) {
+                            if (err) {
+                                console.log(err);
+                                callback(err);
+                            } else {
+                                console.log('result', result)
+                                //res.status(200).json({ "message": "saved to database" }) 
+                                callback();
+                            }
+                        }
+                    )
+                })
+                .catch(err => {
+                    callback(err);
+                })
+        }, function (err, result) {
+            if (err) {
+                res.status(500).json({ "message": "Could not save" + err });
+            }
+            else {
+                res.status(200).json({ "message": "saved to database" }) 
+            }
+        })
+        
+        //res.send("added");
+    });
+
+    app.get("/searchRestoName", (req, res) => {
+        console.log("searching");
+        restaurantSchema.find({}, { name: 1 },
+            function (err, resto) {
+                if (err) return console.error(err);
+                //console.log("resto----------", resto);
+                //res.json({ docs: resto })
+                res.send(JSON.stringify({ "results": resto }));
+            }
+        );
+    });
+
+    app.get("/getMenu", (req, res) => {
+        console.log('query params', req.query);
+        dishRestaurantMappingSchemaSchema.find({ restaurant_id: req.query.rid}, function (err, menu) {
+            if (err) throw err;
+            console.log('menu------------', menu);
+            var restoDish = [];
+            async.forEachOf(menu, function (item, index, callback) {
+                dishSchema.findOne({_id: item.food_id}, function (error, dish) {
+                    console.log('dish name', dish);
+                    restoDish[index] = {
+                                            dish_id: item.food_id,
+                                            dish_name: dish.name,
+                                            dish_price: item.Price,
+                                            dish_category: item.Category
+                                        }
+                    callback();
+                })
+            }, function (params) {
+                res.send(restoDish);
+            })           
+        })
+    })
 
     function isLoggedIn(req, res, next) {
         if (req.isAuthenticated())

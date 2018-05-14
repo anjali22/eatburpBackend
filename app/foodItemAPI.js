@@ -1,4 +1,4 @@
-var foodItem = require('../app/models/foodItem');
+var dishSchema = require('../app/models/dishSchema');
 var bodyParser = require('body-parser');
 var Promise = require('promise');
 var express = require('express');
@@ -45,7 +45,7 @@ module.exports = function foodItemAPIs(app) {
     });
 
     app.get("/getFoodItems", (req, res) => {
-        foodItem.find(function (err, items) {
+        dishSchema.find(function (err, items) {
             res.json({ docs: items })
             //res.send(users);
         });
@@ -58,7 +58,7 @@ module.exports = function foodItemAPIs(app) {
     });
 
     app.post("/addItem", (req, res) => {
-        var itemsData = new foodItem(req.body);
+        var itemsData = new dishSchema(req.body);
         console.log("itemsData------------", itemsData);
         itemsData.save(function (err) {
             if (err) throw err;
@@ -85,9 +85,9 @@ module.exports = function foodItemAPIs(app) {
                         console.log("element--------", element);
                         req.body.images = element;
                         console.log("req.body-----------", req.body)
-                        var foodItemData = new foodItem(req.body);
-                        console.log("foodItem------------", foodItemData);
-                        foodItemData.save(function (err) {
+                        var dishSchemaData = new dishSchema(req.body);
+                        console.log("foodItem------------", dishSchemaData);
+                        dishSchemaData.save(function (err) {
                             if (err) throw err;
                         })
                             .then(item => {
