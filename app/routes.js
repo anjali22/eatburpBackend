@@ -254,7 +254,7 @@ module.exports = function(app, passport, AWS) {
                                 if (err) {
                                     return next(err);
                                 }
-                                dishRestaurantMappingSchemaSchema.findOneAndUpdate(
+                                dishRestaurantMappingSchema.findOneAndUpdate(
                                     {
                                         $and: [
                                             { 'restaurant_id': restaurant_id },
@@ -345,7 +345,7 @@ module.exports = function(app, passport, AWS) {
                             if(err) {
                                 return next(err);
                             }
-                            dishRestaurantMappingSchemaSchema.findOneAndUpdate(
+                            dishRestaurantMappingSchema.findOneAndUpdate(
                                 {
                                     $and: [
                                         { 'restaurant_id': restaurant_id },
@@ -494,7 +494,7 @@ module.exports = function(app, passport, AWS) {
                 }
             )
                 .then(item => {
-                    dishRestaurantMappingSchemaSchema.findOneAndUpdate(
+                    dishRestaurantMappingSchema.findOneAndUpdate(
                         {
                             $and: [
                                 {'restaurant_id': req.body.restoName},
@@ -552,7 +552,7 @@ module.exports = function(app, passport, AWS) {
 
     app.get("/getMenu", (req, res) => {
         console.log('query params', req.query);
-        dishRestaurantMappingSchemaSchema.find({ restaurant_id: req.query.rid}, function (err, menu) {
+        dishRestaurantMappingSchema.find({ restaurant_id: req.query.rid}, function (err, menu) {
             if (err) throw err;
             console.log('menu------------', menu);
             var restoDish = [];
