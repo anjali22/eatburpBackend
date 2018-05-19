@@ -2,6 +2,7 @@ var restaurantSchema       = require('../app/models/restaurantSchema');
 var dishSchema = require('../app/models/dishSchema');
 var reviewSchema = require('../app/models/reviewSchema');
 var dishRestaurantMappingSchema = require('../app/models/dishRestaurantMappingSchema');
+var employee = require('../app/models/employeeSchema');
 
 var bodyParser = require('body-parser');
 var Promise = require('promise');
@@ -39,6 +40,12 @@ var logger = new winston.Logger({
 
 module.exports = function(app, passport, AWS) {
 
+    app.get('/', function (req, res) {
+        console.log("jhihhi");
+        res.render('index.ejs');
+        //res.sendFile(__dirname + '/addResto.html');
+    });
+
     app.get('/addResto', function(req, res){
         console.log("jhihhi");
         res.render('addResto.ejs');
@@ -75,10 +82,21 @@ module.exports = function(app, passport, AWS) {
         upload(req, res, function multerUpload(err) {
             //console.log("req inside upload------",req)
             console.log('building', req.body['address.building']);
+            var userId;
+            var token = req.headers['x-access-token'];
+            if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
+
+            jwt.verify(token, process.env.JWT_SECRET, function (err, decoded) {
+                if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
+                else {
+                    console.log('decoded-----------', decoded);
+                    userId = decoded._id
+                }
+            });
             restaurantSchema.find(
                 {
                     $and: [
-                        {'name': req.body.name},
+                        {'restaurant_name': req.body.name},
                         {'address.building': req.body['address.building']}
                     ]
                 }, 
@@ -106,11 +124,28 @@ module.exports = function(app, passport, AWS) {
                             //console.log("restosData------------", restosData);
                             restaurantSchemaData.save((err, result) => {
                                     if (err) {
-                                        console.log("erroe--------", err);
+                                        console.log("error--------", err);
                                         res.status(400).json({"message": err});
+                                    } else {
+                                        console.log("item details", result);
+                                        //res.status(200).json({ "message": "Successfully saved" });
+                                        employee.findOneAndUpdate(
+                                            { _id: userId },
+                                            {
+                                                $push: {
+                                                    added_restaurants_id: result._id
+                                                }
+                                            },
+                                            function (err, result) {
+                                                if (err) {
+                                                    console.log(err);
+                                                    res.status(400).json({ "message": err });
+                                                } else {
+                                                    console.log(result, 'resultsssssssss')
+                                                    res.status(200).json({ "message": "Successfully saved" });
+                                                }
+                                            })
                                     }
-                                    console.log("item details", result);
-                                    res.status(200).json({"message": "Successfully saved"});
                                 })
                             //res.send("uploaded successfully")
                         }).catch(err => {
@@ -476,7 +511,29 @@ module.exports = function(app, passport, AWS) {
 
     app.post("/addMenu", (req, res) => {
         console.log(req.body);
+        var userId;
+        console.log('headers---------', req.headers)
+        var token = req.headers['x-access-token'];
+        if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
+
+        jwt.verify(token, process.env.JWT_SECRET, function (err, decoded) {
+            if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
+            else {
+                console.log('decoded-----------', decoded);
+                userId = decoded._id
+            }
+        });
         async.forEachOf(req.body.inputFields, function (inputField, index, callback) {
+            var searchTag= [];
+            if(inputField.search_tag.includes(',')) {
+                const allValues = inputField.search_tag.split(',');
+                for (let i = 0; i < allValues.length; i++) {
+                    searchTag.push(allValues[i]);
+                }
+            }
+            else {
+                searchTag.push(inputField.search_tag);
+            }
             /** Check whether that food item is already stored or not in food item collection. 
              * Only if not then store new one otherwise pick the id already stored */
             dishSchema.findOneAndUpdate(
@@ -485,7 +542,7 @@ module.exports = function(app, passport, AWS) {
                     'dish_name': inputField.dish_name,
                     'cuisine': inputField.cuisine,
                     'meal': inputField.meal,
-                    'search_tag': inputField.search_tag,
+                    'search_tag': searchTag,
                     'type': inputField.type
                 },
                 {
@@ -494,6 +551,7 @@ module.exports = function(app, passport, AWS) {
                 }
             )
                 .then(item => {
+                    console.log('item-------', item)
                     dishRestaurantMappingSchema.findOneAndUpdate(
                         {
                             $and: [
@@ -518,7 +576,23 @@ module.exports = function(app, passport, AWS) {
                             } else {
                                 console.log('result', result)
                                 //res.status(200).json({ "message": "saved to database" }) 
-                                callback();
+                                //callback(null, result);
+                                employee.findOneAndUpdate(
+                                    {_id: userId},
+                                    {
+                                        $push: {
+                                            added_menu_id: result._id
+                                        }
+                                    },
+                                    function (err, result) {
+                                    if (err) {
+                                        console.log(err);
+                                        callback(err);
+                                    } else {
+                                        console.log(result, 'resultsssssssss')
+                                        callback(null, result);
+                                    }
+                                })
                             }
                         }
                     )
@@ -531,6 +605,7 @@ module.exports = function(app, passport, AWS) {
                 res.status(500).json({ "message": "Could not save" + err });
             }
             else {
+                console.log('final result-------', result);
                 res.status(200).json({ "message": "saved to database" }) 
             }
         })
@@ -540,11 +615,9 @@ module.exports = function(app, passport, AWS) {
 
     app.get("/searchRestoName", (req, res) => {
         console.log("searching");
-        restaurantSchema.find({}, { name: 1 },
+        restaurantSchema.find({}, { restaurant_name: 1 },
             function (err, resto) {
                 if (err) return console.error(err);
-                //console.log("resto----------", resto);
-                //res.json({ docs: resto })
                 res.send(JSON.stringify({ "results": resto }));
             }
         );
@@ -557,13 +630,13 @@ module.exports = function(app, passport, AWS) {
             console.log('menu------------', menu);
             var restoDish = [];
             async.forEachOf(menu, function (item, index, callback) {
-                dishSchema.findOne({_id: item.food_id}, function (error, dish) {
+                dishSchema.findOne({_id: item.dish_id}, function (error, dish) {
                     console.log('dish name', dish);
                     restoDish[index] = {
-                                            dish_id: item.food_id,
-                                            dish_name: dish.name,
-                                            dish_price: item.Price,
-                                            dish_category: item.Category
+                        dish_id: item.dish_id,
+                        dish_name: dish.dish_name,
+                        dish_price: item.price,
+                        dish_category: item.dish_category
                                         }
                     callback();
                 })
