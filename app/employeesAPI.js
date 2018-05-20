@@ -55,6 +55,10 @@ module.exports = function employeesAPI(app) {
 
     });
 
+    /* app.options("/angularSignIn", (req, res) => {
+        console.log("options successful");
+    }) */
+
     app.post("/angularSignIn", (req, res) => {
         console.log(req.body);
         employees.find({ email: req.body.email }, function (err, user) {
