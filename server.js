@@ -61,9 +61,14 @@ app.use(function (req, res, next) {
     //set headers to allow cross origin request.
     res.header("Access-Control-Allow-Origin", "*");
     res.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS');
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, x-access-token");
     next();
 });
+
+app.options("/*", (req, res) => {
+    console.log("options successful");
+    res.send("options successful");
+})
 
 // s3 setup
 var AWS = require('aws-sdk');
@@ -80,6 +85,7 @@ AWS.config.update({
 require('./app/routes.js')(app, passport, AWS); // load our routes and pass in our app and fully configured passport
 require('./app/foodItemAPI.js')(app);
 require('./app/usersAPI.js')(app);
+require('./app/employeesAPI')(app);
 require('./app/s3ImageSaving');
 
 app.listen(process.env.PORT || 3000, function(){
