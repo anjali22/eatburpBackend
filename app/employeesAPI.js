@@ -35,9 +35,7 @@ module.exports = function employeesAPI(app) {
                             _id: item._id
                         },
                             process.env.JWT_SECRET,
-                            {
-                                expiresIn: '2h'
-                            });
+                        );
                         res.status(200).json({
                             success: 'Welcome to the JWT Auth',
                             token: JWTToken,
@@ -79,9 +77,7 @@ module.exports = function employeesAPI(app) {
                     _id: user[0]._id
                 },
                     process.env.JWT_SECRET,
-                    {
-                        expiresIn: '2h'
-                    });
+                );
                 console.log(JWTToken);
                 res.status(200).json({
                     success: 'Welcome to the JWT Auth',

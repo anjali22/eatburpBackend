@@ -470,7 +470,7 @@ module.exports = function(app, passport, AWS) {
 
                 const s3Params = {
                     Bucket: S3_BUCKET,
-                    Key: req.body.name || req.body.dish_name + '/' + fileName,
+                    Key: req.body.restaurant_name || req.body.dish_name + '/' + fileName,
                     Expires: 60,
                     Body: data,
                     ContentType: mimeType,
@@ -514,6 +514,7 @@ module.exports = function(app, passport, AWS) {
         var userId;
         console.log('headers---------', req.headers)
         var token = req.headers['x-access-token'];
+        console.log('token-----------', token);
         if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
 
         jwt.verify(token, process.env.JWT_SECRET, function (err, decoded) {
@@ -645,6 +646,39 @@ module.exports = function(app, passport, AWS) {
             })           
         })
     })
+
+    app.get("/getTopDishRestaurants", (req, res) => {
+        console.log("query param", req.query.tag);
+        tag = req.query.tag;;
+        //find those dishes which have searchtag we got above
+        dishSchema.find({ search_tag: tag }, function (err, dishes) {
+            if (err) throw err;
+            var topRestaurants = [];
+            console.log('dishes-------', dishes);
+            async.forEachOf(dishes, function (dish, index, callback) {
+                dishRestaurantMappingSchema.find({ dish_id: dish._id }, function (error, mapping) {
+                    mapping[0].dish_name = 'Test Dish';
+                    mapping[0].restaurant_name = 'Test restaurant';
+                    topRestaurants.push(mapping[0]);
+                    console.log("mappinggggggggggggggggggg", mapping[0]);
+                    callback();
+                })
+            }, function (err) {
+                if (err) {
+                    console.log(err);
+                }
+                console.log('top restaurantssssss', topRestaurants);
+                topRestaurants.sort(function (a, b) {
+                    console.log('ave rating', a.average_rating, b.average_rating);
+                    return b.average_rating - a.average_rating;
+                });
+                console.log('top restaurantssssss after sorting-------', topRestaurants);
+                console.log(topRestaurants.slice(0, 10));
+                res.send(topRestaurants);
+            })
+        })
+
+    });
 
     function isLoggedIn(req, res, next) {
         if (req.isAuthenticated())
