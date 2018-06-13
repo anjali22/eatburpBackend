@@ -1,4 +1,4 @@
-var users = require('../app/models/user');
+var employees = require('../../app/models/employeeSchema');
 
 var bodyParser = require('body-parser');
 var Promise = require('promise');
@@ -13,17 +13,17 @@ app.use(bodyParser.urlencoded({
     extended: true
 }));
 
-module.exports = function usersAPI(app) {
+module.exports = function employeesAPI(app) {
 
-    app.post("/signUp", (req, res) => {
-        users.findOne({ email: req.body.email }, function (err, user) {
+    app.post("/angularSignUp", (req, res) => {
+        employees.findOne({ email: req.body.email }, function (err, user) {
             if (err) throw err;
             if (user) {
                 res.status(400).json({
                     error: "User already registered. Please login."
                 })
             } else {
-                var newUser = new users(req.body);
+                var newUser = new employees(req.body);
                 console.log('newUser-----------', newUser);
                 newUser.password = newUser.generateHash(req.body.password);
                 newUser.save(function (err) {
@@ -38,7 +38,11 @@ module.exports = function usersAPI(app) {
                         );
                         res.status(200).json({
                             success: 'Welcome to the JWT Auth',
-                            token: JWTToken
+                            token: JWTToken,
+                            user: {
+                                name: item.first_name + ' ' + item.last_name,
+                                email: item.email
+                            }
                         });
                     })
                     .catch(err => {
@@ -49,9 +53,13 @@ module.exports = function usersAPI(app) {
 
     });
 
-    app.post("/signIn", (req, res) => {
+    /* app.options("/angularSignIn", (req, res) => {
+        console.log("options successful");
+    }) */
+
+    app.post("/angularSignIn", (req, res) => {
         console.log(req.body);
-        users.find({ email: req.body.email }, function (err, user) {
+        employees.find({ email: req.body.email }, function (err, user) {
             console.log(user);
             if (err) {
                 res.send(err)
@@ -73,7 +81,11 @@ module.exports = function usersAPI(app) {
                 console.log(JWTToken);
                 res.status(200).json({
                     success: 'Welcome to the JWT Auth',
-                    token: JWTToken
+                    token: JWTToken,
+                    user: {
+                        name: user[0].first_name + ' ' +  user[0].last_name,
+                        email: user[0].email
+                    }
                 });
             }
         })

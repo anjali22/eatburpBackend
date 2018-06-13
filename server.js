@@ -13,7 +13,7 @@ var cookieParser = require('cookie-parser');
 var session      = require('express-session');
 
 var fs = require("fs");
-var uri = 'mongodb://eatburp:eatburp01@ds251985.mlab.com:51985/eatburp';
+var uri = process.env.MLAB_URL;
 var path = require('path'),
 fs = require('fs');
 
@@ -84,8 +84,12 @@ AWS.config.update({
 // routes ======================================================================
 require('./app/routes.js')(app, passport, AWS); // load our routes and pass in our app and fully configured passport
 require('./app/foodItemAPI.js')(app);
-require('./app/usersAPI.js')(app);
-require('./app/employeesAPI')(app);
+require('./app/apis/usersAPI.js')(app);
+require('./app/apis/searchTagAPI')(app);
+require('./app/apis/cuisineAPI')(app);
+require('./app/apis/mealAPI')(app);
+require('./app/apis/employeesAPI')(app);
+require('./app/apis/dishRestaurantMappingAPI')(app);
 require('./app/s3ImageSaving');
 
 app.listen(process.env.PORT || 3000, function(){

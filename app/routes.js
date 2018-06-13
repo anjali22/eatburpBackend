@@ -242,8 +242,8 @@ module.exports = function(app, passport, AWS) {
                         async.parallel([
                             function getRestaurantId(callback) {
                                 restaurantSchema.findOneAndUpdate(
-                                    { 'name': req.body.restaurantName },
-                                    { 'name': req.body.restaurantName },
+                                    { 'restaurant_name': req.body.restaurantName },
+                                    { 'restaurant_name': req.body.restaurantName },
                                     { upsert: true, new: true },
                                     (err, restaurant) => {
                                         if (err) {
@@ -259,8 +259,8 @@ module.exports = function(app, passport, AWS) {
 
                             function getDishId(callback) {
                                 dishSchema.findOneAndUpdate(
-                                    { 'name': req.body.dish },
-                                    { 'name': req.body.dish, 'images': element },                                    { upsert: true, new: true },
+                                    { 'dish_name': req.body.dish },
+                                    { 'dish_name': req.body.dish, 'images': element },                                    { upsert: true, new: true },
                                     (err, item) => {
                                         if (err) {
                                             console.log("erroe--------", err);
@@ -509,7 +509,7 @@ module.exports = function(app, passport, AWS) {
         });
     } 
 
-    app.post("/addMenu", (req, res) => {
+   /*  app.post("/addMenu", (req, res) => {
         console.log(req.body);
         var userId;
         console.log('headers---------', req.headers)
@@ -526,17 +526,12 @@ module.exports = function(app, passport, AWS) {
         });
         async.forEachOf(req.body.inputFields, function (inputField, index, callback) {
             var searchTag= [];
-            if(inputField.search_tag.includes(',')) {
-                const allValues = inputField.search_tag.split(',');
-                for (let i = 0; i < allValues.length; i++) {
-                    searchTag.push(allValues[i]);
-                }
-            }
-            else {
-                searchTag.push(inputField.search_tag);
-            }
-            /** Check whether that food item is already stored or not in food item collection. 
-             * Only if not then store new one otherwise pick the id already stored */
+            inputField.search_tag.forEach(x => {
+                searchTag.push(x['search_tag']);
+            });
+            console.log('search tags------------', searchTag);
+            // Check whether that food item is already stored or not in food item collection. 
+            // * Only if not then store new one otherwise pick the id already stored 
             dishSchema.findOneAndUpdate(
                 { 'dish_name': inputField.dish_name },
                 {
@@ -561,8 +556,10 @@ module.exports = function(app, passport, AWS) {
                             ]
                         },
                         {
-                            'restaurant_id': req.body.restoName,
+                            'restaurant_id': req.body.restaurant._id,
+                            'restaurant_name': req.body.restaurant.restaurant_name,
                             'dish_id': item._id,
+                            'dish_name': item.dish_name,
                             'price': inputField.price,
                             'dish_category': inputField.menu_category
                         },
@@ -612,7 +609,7 @@ module.exports = function(app, passport, AWS) {
         })
         
         //res.send("added");
-    });
+    }); */
 
     app.get("/searchRestoName", (req, res) => {
         console.log("searching");
@@ -624,7 +621,7 @@ module.exports = function(app, passport, AWS) {
         );
     });
 
-    app.get("/getMenu", (req, res) => {
+   /*  app.get("/getMenu", (req, res) => {
         console.log('query params', req.query);
         dishRestaurantMappingSchema.find({ restaurant_id: req.query.rid}, function (err, menu) {
             if (err) throw err;
@@ -678,7 +675,7 @@ module.exports = function(app, passport, AWS) {
             })
         })
 
-    });
+    }); */
 
     function isLoggedIn(req, res, next) {
         if (req.isAuthenticated())
