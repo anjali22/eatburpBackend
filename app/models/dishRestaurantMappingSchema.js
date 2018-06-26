@@ -9,7 +9,7 @@ var dishRestaurantMappingSchema = new mongoose.Schema({
     review_id: [String],
     average_rating: Number,
     images: [String],
-    recommendation: Number,
+    recommended: Number,
     dish_name: String,
     restaurant_name: String
 });

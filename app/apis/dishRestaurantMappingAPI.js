@@ -3,6 +3,7 @@ var dishSchema = require('../../app/models/dishSchema');
 var reviewSchema = require('../../app/models/reviewSchema');
 var dishRestaurantMappingSchema = require('../../app/models/dishRestaurantMappingSchema');
 var employee = require('../../app/models/employeeSchema');
+var userSchema = require('../models/user');
 
 var bodyParser = require('body-parser');
 var Promise = require('promise');
@@ -172,6 +173,98 @@ module.exports = function dishRestaurantMappingAPI(app) {
                 res.send(topRestaurants);
             })
         })
-
     });
+
+    app.post("/addRecommendedDish", (req, res) => {
+        console.log("req.body", req.body);
+        var userId, review_id;
+        /* console.log('headers---------', req.headers)
+        var token = req.headers['x-access-token'];
+        console.log('token-----------', token);
+        if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
+
+        jwt.verify(token, process.env.JWT_SECRET, function (err, decoded) {
+            if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
+            else {
+                console.log('decoded-----------', decoded);
+                userId = decoded._id
+            }
+        }); */
+        var reviewData = new reviewSchema();
+        reviewData.rating = 5;
+        reviewData.recommended = true;
+        reviewData.user_id = req.body.userId;
+        // reviewData.user_id = userId; 
+        async.series([
+            function saveReview(callback) {
+                reviewData.save(function (err, review) {
+                    if (err) {
+                        console.log(err);
+                    }
+                    console.log("review id------", review._id);
+                    review_id = review._id;
+                    callback();
+                })
+            },
+
+            function addRecommendValueInDishRestoMapping(callback) {
+                dishRestaurantMappingSchema.findOneAndUpdate(
+                    {
+                       _id: req.body.mappingId
+                    },
+                    {
+                        $push: {
+                            review_id: review_id
+                        },
+                        $inc: { 
+                            recommended: 1 
+                        } 
+                    },
+                    {
+                        upsert: true,
+                        new: true
+                    },
+                    function (err, result) {
+                        if (err) {
+                            console.log("error in storing resto item data 1-------", err);
+                            callback();
+                        } else {
+                            console.log("stored data------- 1", result);
+                            callback();
+                        }
+                    }
+                )
+            }
+        ],
+            function increaseCountOfUserReview(err, result) {
+                if (err) throw err;
+                userSchema.findOneAndUpdate(
+                    {
+                        _id: req.body.userId
+                    },
+                    {
+                        $inc: {
+                            no_of_recommendations: 1
+                        }
+                    },
+                    {
+                        upsert: true,
+                        new: true
+                    },
+                    function (err, result) {
+                        if (err) {
+                            console.log("error in storing resto item data 2--------", err);
+                            //callback(err);
+                        } else {
+                            console.log("stored data------- 2", result);
+                            //callback(result);
+                            res.send("All well")
+                        }
+                    }
+                )
+            }
+    )
+        
+        
+    })
 }

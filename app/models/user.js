@@ -12,7 +12,8 @@ var userSchema = mongoose.Schema({
     facebook_id  : String,
     facebook_token : String,
     google_id : String,
-    google_token : String
+    google_token : String,
+    no_of_recommendations: Number
 
 });
 

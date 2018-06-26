@@ -6,7 +6,8 @@ var reviewSchema = new mongoose.Schema({
     review: String,
     user_id: String,
     rating: Number,
-    imageUrl: [String]
+    imageUrl: [String],
+    recommended: Boolean
 });
 
 module.exports = mongoose.model("reviews", reviewSchema);
