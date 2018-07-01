@@ -26,6 +26,22 @@ module.exports = function usersAPI(app) {
                 var newUser = new users(req.body);
                 newUser.first_name = '';
                 newUser.last_name = '';
+                newUser.no_of_recommendations = 0;
+                newUser.no_of_reviews = 0;
+                newUser.image = '';
+                newUser.foodie_level = 0;
+                newUser.phone_number = '';
+                newUser.address = {
+                    building: '',
+                    latitude: 0,
+                    longitude: 0,
+                    street: '',
+                    locality: '',
+                    city: '',
+                    zipcode: '',
+                    state: '',
+                    country: ''
+                }
                 console.log('newUser-----------', newUser);
                 newUser.password = newUser.generateHash(req.body.password);
                 newUser.save(function (err) {

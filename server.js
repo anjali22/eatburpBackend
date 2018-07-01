@@ -82,7 +82,7 @@ AWS.config.update({
 });
 
 // routes ======================================================================
-require('./app/routes.js')(app, passport, AWS); // load our routes and pass in our app and fully configured passport
+require('./app/routes.js')(app, AWS); // load our routes and pass in our app and fully configured passport
 require('./app/foodItemAPI.js')(app);
 require('./app/apis/usersAPI.js')(app);
 require('./app/apis/searchTagAPI')(app);

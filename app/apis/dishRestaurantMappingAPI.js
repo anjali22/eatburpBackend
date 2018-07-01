@@ -48,7 +48,8 @@ module.exports = function dishRestaurantMappingAPI(app) {
                     'cuisine': inputField.cuisine,
                     'meal': inputField.meal,
                     'search_tag': searchTag,
-                    'type': inputField.type
+                    'type': inputField.type,
+                    'images': []
                 },
                 {
                     upsert: true,
@@ -70,7 +71,11 @@ module.exports = function dishRestaurantMappingAPI(app) {
                             'dish_id': item._id,
                             'dish_name': item.dish_name,
                             'price': inputField.price,
-                            'dish_category': inputField.menu_category
+                            'dish_category': inputField.menu_category,
+                            'review_id': [],
+                            'average_rating': 0,
+                            'images': [],
+                            'recommended':0
                         },
                         {
                             upsert: true,
@@ -268,6 +273,9 @@ module.exports = function dishRestaurantMappingAPI(app) {
         reviewData.rating = 5;
         reviewData.recommended = true;
         reviewData.user_id = req.body.userId;
+        reviewData.review = '';
+        reviewData.date = '';
+        reviewData.images = [];
         // reviewData.user_id = userId; 
         async.series([
             function saveReview(callback) {
