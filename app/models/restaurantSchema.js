@@ -9,7 +9,10 @@ var restaurantSchema = new mongoose.Schema({
         longitude: Number,  
         street: String,
         locality: String,
-        zipcode: String
+        city: String,
+        zipcode: String,
+        state: String,
+        country: String
     },
     phone_number: String,
     average_cost_for_two: String,
@@ -23,6 +26,7 @@ var restaurantSchema = new mongoose.Schema({
     images: [String],
     days_closed: [String],
     reviews: [String],
-    avg_rating: Number
+    avg_rating: Number,
+    cuisines: [String]
 });
 module.exports = mongoose.model("restaurants", restaurantSchema);

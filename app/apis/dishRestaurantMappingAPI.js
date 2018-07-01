@@ -143,6 +143,80 @@ module.exports = function dishRestaurantMappingAPI(app) {
         })
     })
 
+    app.get("/getTopDishes", (req, res) => {
+        console.log(req.headers);
+        if (req.headers['x-access-token']) {
+            var dishes = [
+                {
+                    _id: 1,
+                    restaurant_id: "5af6ae1cf36d280cecd2038c",
+                    restaurant_name: "Mitti - Brewing Ideas",
+                    dish_id: "5af6a339ce31f73679fa88f4",
+                    dish_name: "Kaccha Coleslaw",
+                    price: 109,
+                    dish_category: "All Day Nashta",
+                    average_rating: 4.5,
+                    recommendation: 100,
+                    imageUrls: ["https://hips.hearstapps.com/ghk.h-cdn.co/assets/16/38/1600x1066/gallery-1474822198-how-to-make-pancakes.jpg?resize=768:*", "https://www.pexels.com/photo/blur-breakfast-close-up-dairy-product-376464/", "https://www.pexels.com/photo/chocolate-delicious-dessert-food-574111/", "https://www.pexels.com/photo/pancakes-with-strawberry-blueberries-and-maple-syrup-718739/"],
+                }, {
+                    _id: 2,
+                    restaurant_id: "5af6ae1cf36d280cecd2038c",
+                    restaurant_name: "Mitti - Brewing Ideas",
+                    dish_id: "5af6a339ce31f73679fa88f4",
+                    dish_name: "Kaccha Coleslaw",
+                    price: 109,
+                    dish_category: "All Day Nashta",
+                    average_rating: 4.5,
+                    recommendation: 100,
+                    imageUrls: ["https://www.pexels.com/photo/blur-breakfast-close-up-dairy-product-376464/", "https://www.pexels.com/photo/chocolate-delicious-dessert-food-574111/", "https://www.pexels.com/photo/pancakes-with-strawberry-blueberries-and-maple-syrup-718739/"],
+                }, {
+                    _id: 3,
+                    restaurant_id: "5af6ae1cf36d280cecd2038c",
+                    restaurant_name: "Mitti - Brewing Ideas",
+                    dish_id: "5af6a339ce31f73679fa88f4",
+                    dish_name: "Kaccha Coleslaw",
+                    price: 109,
+                    dish_category: "All Day Nashta",
+                    average_rating: 4.5,
+                    recommendation: 100,
+                    imageUrls: ["https://www.pexels.com/photo/blur-breakfast-close-up-dairy-product-376464/", "https://www.pexels.com/photo/chocolate-delicious-dessert-food-574111/", "https://www.pexels.com/photo/pancakes-with-strawberry-blueberries-and-maple-syrup-718739/"],
+                }, {
+                    _id: 4,
+                    restaurant_id: "5af6ae1cf36d280cecd2038c",
+                    restaurant_name: "Mitti - Brewing Ideas",
+                    dish_id: "5af6a339ce31f73679fa88f4",
+                    dish_name: "Kaccha Coleslaw",
+                    price: 109,
+                    dish_category: "All Day Nashta",
+                    average_rating: 4.5,
+                    recommendation: 100,
+                    imageUrls: ["https://www.pexels.com/photo/blur-breakfast-close-up-dairy-product-376464/", "https://www.pexels.com/photo/chocolate-delicious-dessert-food-574111/", "https://www.pexels.com/photo/pancakes-with-strawberry-blueberries-and-maple-syrup-718739/"],
+                }, {
+                    _id: 5,
+                    restaurant_id: "5af6ae1cf36d280cecd2038c",
+                    restaurant_name: "Mitti - Brewing Ideas",
+                    dish_id: "5af6a339ce31f73679fa88f4",
+                    dish_name: "Kaccha Coleslaw",
+                    price: 109,
+                    dish_category: "All Day Nashta",
+                    average_rating: 4.5,
+                    recommendation: 100,
+                    imageUrls: ["https://www.pexels.com/photo/blur-breakfast-close-up-dairy-product-376464/", "https://www.pexels.com/photo/chocolate-delicious-dessert-food-574111/", "https://www.pexels.com/photo/pancakes-with-strawberry-blueberries-and-maple-syrup-718739/"],
+                },
+            ];
+            res.send(dishes);
+        } else {
+            res.send('no token found');
+        }
+        
+
+       
+        // dishSchema.find(function (err, users) {
+        //     res.json({ docs: users })
+        //     //res.send(users);
+        // });
+    });
+
     app.get("/getTopDishRestaurants", (req, res) => {
         console.log("query param", req.query.tag);
         tag = req.query.tag;;
@@ -230,13 +304,13 @@ module.exports = function dishRestaurantMappingAPI(app) {
                             callback();
                         } else {
                             console.log("stored data------- 1", result);
-                            callback();
+                            callback(result);
                         }
                     }
                 )
             }
         ],
-            function increaseCountOfUserReview(err, result) {
+            function increaseCountOfUserReview(err, results) {
                 if (err) throw err;
                 userSchema.findOneAndUpdate(
                     {
@@ -256,9 +330,9 @@ module.exports = function dishRestaurantMappingAPI(app) {
                             console.log("error in storing resto item data 2--------", err);
                             //callback(err);
                         } else {
-                            console.log("stored data------- 2", result);
+                            console.log("stored data------- 2", results);
                             //callback(result);
-                            res.send("All well")
+                            res.send(results)
                         }
                     }
                 )

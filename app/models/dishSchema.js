@@ -1,5 +1,4 @@
 var mongoose = require('mongoose');
-var bcrypt = require('bcrypt-nodejs');
 
 var dishSchema = new mongoose.Schema({
     dish_name: String,

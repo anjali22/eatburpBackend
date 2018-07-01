@@ -1,7 +1,6 @@
 var mongoose = require('mongoose');
 
 var dishRestaurantMappingSchema = new mongoose.Schema({
-    id: Number,
     restaurant_id: String,
     dish_id: String,
     price: Number,
