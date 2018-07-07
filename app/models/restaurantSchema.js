@@ -2,13 +2,13 @@ var mongoose = require('mongoose');
 
 //restaurant data
 var restaurantSchema = new mongoose.Schema({
-    restaurant_name: String,
+    restaurant_name: String, //index
     address: {
         building: String,
-        latitude: Number,
-        longitude: Number,  
+        latitude: Number,   //index
+        longitude: Number,  //index
         street: String,
-        locality: String,
+        locality: String, 
         city: String,
         zipcode: String,
         state: String,
@@ -26,7 +26,7 @@ var restaurantSchema = new mongoose.Schema({
     images: [String],
     days_closed: [String],
     reviews: [String],
-    avg_rating: Number,
+    average_rating: Number, //index
     cuisines: [String]
 });
 module.exports = mongoose.model("restaurants", restaurantSchema);

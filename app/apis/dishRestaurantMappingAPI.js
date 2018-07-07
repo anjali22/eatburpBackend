@@ -60,10 +60,14 @@ module.exports = function dishRestaurantMappingAPI(app) {
                     console.log('item-------', item)
                     dishRestaurantMappingSchema.findOneAndUpdate(
                         {
-                            $and: [
-                                { 'restaurant_id': req.body.restoName },
-                                { 'dish_id': item._id }
-                            ]
+                           // $and: [
+                               // { 
+                                    'restaurant_id': req.body.restoName,
+                                 //},
+                                //{ 
+                                    'dish_id': item._id 
+                                //}
+                           // ]
                         },
                         {
                             'restaurant_id': req.body.restaurant._id,
@@ -129,24 +133,142 @@ module.exports = function dishRestaurantMappingAPI(app) {
         console.log('query params', req.query);
         dishRestaurantMappingSchema.find({ restaurant_id: req.query.rid }, function (err, menu) {
             if (err) throw err;
-            console.log('menu------------', menu);
+            //console.log('menu------------', menu);
             var restoDish = [];
-            async.forEachOf(menu, function (item, index, callback) {
-                dishSchema.findOne({ _id: item.dish_id }, function (error, dish) {
-                    console.log('dish name', dish);
+            var reviews = [];
+            async.forEachOf(menu, function menuFor(item, index, callback) {
+                async.forEachOf(item.review_id, function reviewFor(review, reviewIndex, cb) {
+                    //console.log('review-------',review)
+                    reviewSchema.findById(review, function name(error, reviewDetails) {
+                        if (error) throw error;
+                        //console.log('review Details----------', reviewDetails);
+                        userSchema.findById(reviewDetails.user_id)
+                        .then(userInfo => {
+                            //console.log('user details----------', userInfo);
+                            reviews[reviewIndex] = {
+                                _id: reviewDetails._id,
+                                user_id: userInfo._id,
+                                user_first_name: userInfo.first_name,
+                                user_last_name: userInfo.last_name,
+                                foodie_level: userInfo.foodie_level,
+                                profile_image: userInfo.image,
+                                review: reviewDetails.review,
+                                review_images: reviewDetails.images
+                            }
+                            console.log('reviews-----------', reviews);
+                            cb(reviews);
+                            //callback(restoDish);
+                        })
+                        .catch(err => {
+                            cb(err);
+                        })
+                        //cb(reviews);
+                    })
+                    //cb(reviews);
+                    //callback(restoDish);
+                }, function reviewsArray(re) {
+                    console.log('review created', re);
+                    //console.log('index---------', index);
                     restoDish[index] = {
+                        _id: item._id,
+                        restaurant_id: item.restaurant_id,
+                        restaurant_name: item.restaurant_name,
                         dish_id: item.dish_id,
-                        dish_name: dish.dish_name,
-                        dish_price: item.price,
-                        dish_category: item.dish_category
+                        dish_name: item.dish_name,
+                        price: item.price,
+                        dish_category: item.dish_category,
+                        average_rating: item.average_rating,
+                        recommended: item.recommended,
+                        dish_images: item.images,
+                        reviews: re
                     }
+                    console.log('resto dishes--------', restoDish);
                     callback();
                 })
-            }, function (params) {
+                //callback()
+            }, function (err) {
+                console.log("final callback called");
                 res.send(restoDish);
             })
+            //res.send(restoDish);
         })
     })
+
+    app.get("/test", (req, res) => {
+        //const query = new mongoose.Query();
+        const query = dishRestaurantMappingSchema.find();
+        query.setOptions({ explain: 'queryPlanner'});
+        query.collection(dishRestaurantMappingSchema.collection);
+            query.where('restaurant_id', '5af6ae1cf36d280cecd2038c').exec(function name(params, result) {
+                console.log(result);
+                res.send(result)
+            })
+        //console.log(requet);
+        //res.send(JSON.stringify(requet));
+    })
+
+   /*  app.get("/getMenu", (req, res) => {
+        console.log(req.query);
+        var restoDish = [];
+        var reviewDetails = [];
+        async.waterfall([
+            function getDishesFromMapping(callback) {
+                dishRestaurantMappingSchema.find({ restaurant_id: req.query.rid }, function (err, menu) {
+                    if(err) throw err;
+                    callback(null, menu);
+                })
+            },
+            function getReviewsId(menu, callback) {
+                for(var i=0; i< menu.length; i++) {
+                    var reviewIds = menu[i].review_id;
+                    callback(null, reviewIds, i, menu);
+                }
+            },
+            function forOnReviews(reviewIds, menuIndex, menu, callback) {
+                for(var j=0; j< reviewIds.length; j++) {
+                    var userId = reviewIds[j].user_id;
+
+                    callback(null, userId, menuIndex, j, menu, reviewIds);
+                }
+            },
+            function getUserInfo(userId, menuIndex, reviewIndex, menu, reviewIds, callback) {
+                userSchema.findById(userId)
+                .then(userInfo => {
+                    reviewDetails[reviewIndex] = {
+                        _id: reviewIds[reviewIndex]._id,
+                        user_id: userInfo._id,
+                        user_first_name: userInfo.first_name,
+                        user_last_name: userInfo.last_name,
+                        foodie_level: userInfo.foodie_level,
+                        profile_image: userInfo.image,
+                        review: reviewIds[reviewIndex].review,
+                        review_images: reviewIds[reviewIndex].images
+                    }
+                    callback(null, userInfo, menuIndex, reviewIndex, menu, reviewIds, reviewDetails);
+                })
+            },
+            function menuObject(userInfo, menuIndex, reviewIndex, menu, reviewIds, reviewDetails, callback) {
+                restoDish[menuIndex] = {
+                    _id: menu[menuIndex]._id,
+                    restaurant_id: menu[menuIndex].restaurant_id,
+                    restaurant_name: menu[menuIndex].restaurant_name,
+                    dish_id: menu[menuIndex].dish_id,
+                    dish_name: menu[menuIndex].dish_name,
+                    price: menu[menuIndex].price,
+                    dish_category: menu[menuIndex].dish_category,
+                    average_rating: menu[menuIndex].average_rating,
+                    recommended: menu[menuIndex].recommended,
+                    dish_images: menu[menuIndex].images,
+                    reviews: reviewDetails
+                }
+                callback(null, restoDish);
+            }
+        ], function final(err, restoDish) {
+            console.log('restoDish---------', restoDish);
+            res.send(restoDish);
+        })
+        
+    }) */
 
     app.get("/getTopDishes", (req, res) => {
         console.log(req.headers);
@@ -318,35 +440,32 @@ module.exports = function dishRestaurantMappingAPI(app) {
                 )
             }
         ],
-            function increaseCountOfUserReview(err, results) {
-                if (err) throw err;
-                userSchema.findOneAndUpdate(
-                    {
-                        _id: req.body.userId
-                    },
-                    {
-                        $inc: {
-                            no_of_recommendations: 1
-                        }
-                    },
-                    {
-                        upsert: true,
-                        new: true
-                    },
-                    function (err, result) {
-                        if (err) {
-                            console.log("error in storing resto item data 2--------", err);
-                            //callback(err);
-                        } else {
-                            console.log("stored data------- 2", results);
-                            //callback(result);
-                            res.send(results)
-                        }
+        function increaseCountOfUserReview(err, results) {
+            if (err) throw err;
+            userSchema.findOneAndUpdate(
+                {
+                    _id: req.body.userId
+                },
+                {
+                    $inc: {
+                        no_of_recommendations: 1
                     }
-                )
-            }
-    )
-        
-        
+                },
+                {
+                    upsert: true,
+                    new: true
+                },
+                function (err, result) {
+                    if (err) {
+                        console.log("error in storing resto item data 2--------", err);
+                        //callback(err);
+                    } else {
+                        console.log("stored data------- 2", results);
+                        //callback(result);
+                        res.send(results)
+                    }
+                }
+            )
+        })    
     })
 }

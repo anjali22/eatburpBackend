@@ -56,6 +56,7 @@ db.once('open', function() {
   });
 
 console.log("connected or not???",mongoose.connection.readyState);
+mongoose.set('debug', true);
 
 app.use(function (req, res, next) {
     //set headers to allow cross origin request.
@@ -88,6 +89,7 @@ require('./app/apis/usersAPI.js')(app);
 require('./app/apis/searchTagAPI')(app);
 require('./app/apis/cuisineAPI')(app);
 require('./app/apis/mealAPI')(app);
+require('./app/apis/dishTypeAPI')(app);
 require('./app/apis/employeesAPI')(app);
 require('./app/apis/dishRestaurantMappingAPI')(app);
 require('./app/s3ImageSaving');

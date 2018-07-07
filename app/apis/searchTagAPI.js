@@ -20,4 +20,29 @@ module.exports = function searchTagAPI(app) {
             }
         );
     })
+
+    app.post('/createSearchTags', (req, res) => {
+        async.forEachOf(req.body.search_tag, function (tag, index, callback) {
+            searchTag.findOneAndUpdate (
+                {'search_tag': tag},
+                { $setOnInsert: {'search_tag': tag}},
+                {
+                    upsert: true,
+                    new: true
+                }
+            )
+            .then(element => {
+                console.log(index);
+                console.log("data entered", element);
+                callback();
+            })
+            .catch(err => {
+                console.log(err);
+                callback(err);
+            })
+        }, function(err) {
+            console.log(err);
+            res.send("All good");
+        })
+    })
 }
