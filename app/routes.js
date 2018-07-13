@@ -135,7 +135,8 @@ module.exports = function (app, AWS) {
                                                     console.log(result, 'resultsssssssss')
                                                     res.status(200).json({ "message": "Successfully saved" });
                                                 }
-                                            })
+                                            }
+                                        )
                                     }
                                 })
                                 //res.send("uploaded successfully")
@@ -143,9 +144,38 @@ module.exports = function (app, AWS) {
                                 console.log("error---------", err)
                                 res.status(500).json({ "message": "error in saving data please report to technical team" + err })
                             })
+                        } else {
+                            console.log("inside else--------")
+                            restaurantSchemaData.save((err, result) => {
+                                if (err) {
+                                    console.log("error--------", err);
+                                    res.status(400).json({ "message": err });
+                                } else {
+                                    console.log("item details", result);
+                                    //res.status(200).json({ "message": "Successfully saved" });
+                                    employee.findOneAndUpdate(
+                                        { _id: userId },
+                                        {
+                                            $push: {
+                                                added_restaurants_id: result._id
+                                            }
+                                        },
+                                        function (err, result) {
+                                            if (err) {
+                                                console.log(err);
+                                                res.status(400).json({ "message": err });
+                                            } else {
+                                                console.log(result, 'resultsssssssss')
+                                                res.status(200).json({ "message": "Successfully saved" });
+                                            }
+                                        }
+                                    )
+                                }
+                            })
                         }
                     }
-                })
+                }
+            )
         })
     });
 
@@ -219,191 +249,99 @@ module.exports = function (app, AWS) {
                         user_id = decoded._id
                     }
                 });
-                var restaurant_id, dish_id, review_id;
-                // reviewData.user_id = user_id;
                 if (req.files) {
-                    multipleFile(req).then(element => {
+                    multipleFile(req)
+                    .then(element => {
                         console.log("body-----------", req.body);
                         console.log("element--------", element);
                         req.body.images = element;
                         console.log("req.body-----------", req.body)
                         var reviewData = new reviewSchema(req.body);
-                        //var resto_item_rating_Data = new dishRestaurantMappingSchemaSchema();
-
-                        async.parallel([
-                            function getRestaurantId(callback) {
-                                restaurantSchema.findOneAndUpdate(
-                                    { 'restaurant_name': req.body.restaurantName },
-                                    { 'restaurant_name': req.body.restaurantName },
-                                    { upsert: true, new: true },
-                                    (err, restaurant) => {
-                                        if (err) {
-                                            console.log("error--------", err);
-                                            callback(err);
-                                        }
-                                        console.log("restaurant details", restaurant);
-                                        restaurant_id = restaurant._id;
-                                        callback();
+                        reviewData.user.user_id = req.body.user_id;
+                        reviewData.save()
+                        .then(review => {
+                            console.log("review added", review);
+                            dishRestaurantMappingSchema.findOneAndUpdate(
+                                {
+                                    "restaurant_id": req.body.restaurant_id,
+                                    "_id": req.body.mapping_id
+                                },
+                                {
+                                    $push: {
+                                        review_id: review._id,
+                                        reviews: { $each: [review], $sort: { date: -1 }, $slice: 3 }
                                     }
-                                );
-                            },
-
-                            function getDishId(callback) {
-                                dishSchema.findOneAndUpdate(
-                                    { 'dish_name': req.body.dish },
-                                    { 'dish_name': req.body.dish, 'images': element }, { upsert: true, new: true },
-                                    (err, item) => {
-                                        if (err) {
-                                            console.log("erroe--------", err);
-                                            callback(err);
-                                        }
-                                        console.log("item details", item);
-                                        dish_id = item._id;
-                                        callback();
-                                    }
-                                );
-                            },
-
-                            function saveReviewData(callback) {
-                                reviewData.user_id = user_id;
-                                reviewData.save(function (err, review) {
-                                    if (err) {
-                                        callback(err);
-                                    }
-                                    console.log("review id------", review._id);
-                                    review_id = review._id;
-                                    callback();
-                                })
-                            }
-                        ],
-                            function savingReviewToDishRestaurantMappingModel(err, result) {
-                                if (err) {
-                                    return next(err);
                                 }
-                                dishRestaurantMappingSchema.findOneAndUpdate(
-                                    {
-                                        $and: [
-                                            { 'restaurant_id': restaurant_id },
-                                            { 'dish_id': dish_id }
-                                        ]
-                                    },
-                                    {
-                                        'restaurant_id': restaurant_id,
-                                        'dish_id': dish_id,
-                                        $push: {
-                                            review_id: review_id
-                                        }
-                                    },
-                                    {
-                                        upsert: true,
-                                        new: true
-                                    },
-                                    function (err, result) {
-                                        if (err) {
-                                            console.log("error in storing resto item data", err);
-                                        } else {
-                                            console.log("stored data-------", result);
-                                            res.status(200).json({
-                                                success: "review saved to database."
-                                            })
-                                        }
-                                    }
-                                )
-                            }
-                        );
+                            )
+                                .then(item => {
+                                    console.log("item found", item);
+                                    res.status(200).send({ "message": "Here are the reviews", success: item });
+                                })
+                                .catch(err => {
+                                    console.log(err);
+                                    res.status(400).send({ "message": "Please try in some time", error: err })
+                                });
+                        })
+                        .catch(err => {
+                            console.log("error---------", err);
+                            res.status(400).send({ "message": "Please try in some time", error: err })
+                        });
                     }).catch(err => {
-                        console.log("error---------", err)
+                        console.log("error---------", err);
+                        res.status(400).send({ "message": "Please try in some time", error: err })
                     })
                 } else {
                     console.log("inside else--------");
                     console.log("req.body-----------", req.body)
                     var reviewData = new reviewSchema(req.body);
-                    //var resto_item_rating_Data = new dishRestaurantMappingSchemaSchema();
-
-                    async.parallel([
-                        function getRestaurantId(callback) {
-                            restaurantSchema.findOneAndUpdate(
-                                { 'name': req.body.restaurantName },
-                                { 'name': req.body.restaurantName },
-                                { upsert: true, new: true },
-                                (err, restaurant) => {
-                                    if (err) {
-                                        console.log("error--------", err);
-                                        callback(err);
-                                    }
-                                    console.log("restaurant details", restaurant);
-                                    restaurant_id = restaurant._id;
-                                    callback();
-                                }
-                            );
-                        },
-
-                        function getDishId(callback) {
-                            dishSchema.findOneAndUpdate(
-                                { 'name': req.body.dish },
-                                { 'name': req.body.dish },
-                                { upsert: true, new: true },
-                                (err, item) => {
-                                    if (err) {
-                                        console.log("erroe--------", err);
-                                        callback(err);
-                                    }
-                                    console.log("item details", item);
-                                    dish_id = item._id;
-                                    callback();
-                                }
-                            );
-                        },
-
-                        function saveReviewData(callback) {
-                            reviewData.user_id = user_id;
-                            reviewData.save(function (err, review) {
-                                if (err) {
-                                    callback(err);
-                                }
-                                console.log("review id------", review._id);
-                                review_id = review._id;
-                                callback();
-                            })
+                    reviewData.user.user_id = user_id;
+                    reviewData.save(function (err) {
+                        if(err) {
+                            res.status(400).send({"message": "Please try in some time", error: err})
                         }
-                    ],
-                        function savingReviewToDishRestaurantMappingModel(err, result) {
-                            if (err) {
-                                return next(err);
+                    })
+                    .then(review => {
+                        console.log("review added",review);
+                        dishRestaurantMappingSchema.findOneAndUpdate(
+                            {
+                                "restaurant_id": req.body.restaurant_id, 
+                                "_id": req.body.mapping_id
+                            },
+                            {
+                                $push: {
+                                    review_id: review._id,
+                                    reviews: { $each: [review], $sort:{date: -1}, $slice: 3 } 
+                                }
                             }
-                            dishRestaurantMappingSchema.findOneAndUpdate(
-                                {
-                                    $and: [
-                                        { 'restaurant_id': restaurant_id },
-                                        { 'dish_id': dish_id }
-                                    ]
-                                },
-                                {
-                                    $push: {
-                                        review_id: review_id
-                                    }
-                                },
-                                {
-                                    upsert: true,
-                                    new: true
-                                },
-                                function (err, result) {
-                                    if (err) {
-                                        console.log("error in storing resto item data", err);
-                                    } else {
-                                        console.log("stored data-------", result);
-                                        res.status(200).json({
-                                            success: "review saved to database."
-                                        })
-                                    }
-                                }
-                            )
-                        }
-                    )
+                        )
+                        .then(item => {
+                            console.log("item found",item);
+                            res.status(200).send({ "message": "Here are the reviews", success: item });
+                        })
+                        .catch(err=> {
+                            console.log(err);
+                            res.status(400).send({ "message": "Please try in some time", error: err })
+                        });
+                    })
+                    .catch(err => {
+                        console.log("error---------",err);
+                        res.status(400).send({ "message": "Please try in some time", error: err })
+                    });
                 }
             }
         })
     });
+
+    app.get('/findReviews', function (req, res) {
+        dishRestaurantMappingSchema.find({ _id: "5af6fd3ece31f73679fce2c3"})
+                                   .populate('review_id')
+                                    .exec(function (err, story) {
+                                        if (err) return handleError(err);
+                                        console.log(story);
+                                        res.send(story);
+                                        // prints "The author is Ian Fleming"
+                                    });
+    })
 
 
     app.get('/uploadimage', function (req, res) {
@@ -435,21 +373,6 @@ module.exports = function (app, AWS) {
         })
 
     });
-
-    app.get("/getRestaurants", (req, res) => {
-        restaurantSchema.find(function (err, resto) {
-            res.json({ docs: resto })
-        });
-    });
-
-
-    app.get("/getDishes", (req, res) => {
-        dishSchema.find(function (err, users) {
-            res.json({ docs: users })
-            //res.send(users);
-        });
-    });
-
 
     multipleFile = function (req) {
         return new Promise(function (resolve, reject) {
@@ -508,5 +431,24 @@ module.exports = function (app, AWS) {
                 res.send(JSON.stringify({ "results": resto }));
             }
         );
+    });
+
+    app.get("/getRestaurants", (req, res) => {
+        restaurantSchema.find(function (err, resto) {
+            res.json({ docs: resto })
+        });
+    });
+
+    app.get("/getReviews", (req, res) => {
+        reviewSchema.find(function (err, resto) {
+            res.json({ docs: resto })
+        });
+    });
+
+
+    app.get("/getDishes", (req, res) => {
+        dishSchema.find(function (err, users) {
+            res.json({ docs: users })
+        });
     });
 }

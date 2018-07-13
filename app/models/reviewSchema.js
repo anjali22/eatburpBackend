@@ -11,7 +11,10 @@ var reviewSchema = new mongoose.Schema({
     rating: Number,
     images: [String],
     recommended: Boolean,
-    date: String
+    date: {
+        type: Date,
+        default: Date.now
+    }
 });
 
 module.exports = mongoose.model("reviews", reviewSchema);

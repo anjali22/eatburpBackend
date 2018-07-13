@@ -1,4 +1,4 @@
-var restaurantSchema = require('../../app/models/restaurantSchema');
+// var restaurantSchema = require('../../app/models/restaurantSchema');
 var dishSchema = require('../../app/models/dishSchema');
 var reviewSchema = require('../../app/models/reviewSchema');
 var dishRestaurantMappingSchema = require('../../app/models/dishRestaurantMappingSchema');
@@ -6,7 +6,6 @@ var employee = require('../../app/models/employeeSchema');
 var userSchema = require('../models/user');
 
 var bodyParser = require('body-parser');
-var Promise = require('promise');
 var express = require('express');
 const jwt = require('jsonwebtoken');
 var app = express();
@@ -60,14 +59,8 @@ module.exports = function dishRestaurantMappingAPI(app) {
                     console.log('item-------', item)
                     dishRestaurantMappingSchema.findOneAndUpdate(
                         {
-                           // $and: [
-                               // { 
-                                    'restaurant_id': req.body.restoName,
-                                 //},
-                                //{ 
-                                    'dish_id': item._id 
-                                //}
-                           // ]
+                            'restaurant_id': req.body.restaurant._id,
+                            'dish_id': item._id 
                         },
                         {
                             'restaurant_id': req.body.restaurant._id,
@@ -76,6 +69,7 @@ module.exports = function dishRestaurantMappingAPI(app) {
                             'dish_name': item.dish_name,
                             'price': inputField.price,
                             'dish_category': inputField.menu_category,
+                            'search_tag': searchTag,
                             'review_id': [],
                             'average_rating': 0,
                             'images': [],
@@ -129,220 +123,73 @@ module.exports = function dishRestaurantMappingAPI(app) {
         //res.send("added");
     });
 
-    app.get("/getMenu", (req, res) => {
-        console.log('query params', req.query);
-        dishRestaurantMappingSchema.find({ restaurant_id: req.query.rid }, function (err, menu) {
-            if (err) throw err;
-            //console.log('menu------------', menu);
-            var restoDish = [];
-            var reviews = [];
-            async.forEachOf(menu, function menuFor(item, index, callback) {
-                async.forEachOf(item.review_id, function reviewFor(review, reviewIndex, cb) {
-                    //console.log('review-------',review)
-                    reviewSchema.findById(review, function name(error, reviewDetails) {
-                        if (error) throw error;
-                        //console.log('review Details----------', reviewDetails);
-                        userSchema.findById(reviewDetails.user_id)
-                        .then(userInfo => {
-                            //console.log('user details----------', userInfo);
-                            reviews[reviewIndex] = {
-                                _id: reviewDetails._id,
-                                user_id: userInfo._id,
-                                user_first_name: userInfo.first_name,
-                                user_last_name: userInfo.last_name,
-                                foodie_level: userInfo.foodie_level,
-                                profile_image: userInfo.image,
-                                review: reviewDetails.review,
-                                review_images: reviewDetails.images
-                            }
-                            console.log('reviews-----------', reviews);
-                            cb(reviews);
-                            //callback(restoDish);
-                        })
-                        .catch(err => {
-                            cb(err);
-                        })
-                        //cb(reviews);
-                    })
-                    //cb(reviews);
-                    //callback(restoDish);
-                }, function reviewsArray(re) {
-                    console.log('review created', re);
-                    //console.log('index---------', index);
-                    restoDish[index] = {
-                        _id: item._id,
-                        restaurant_id: item.restaurant_id,
-                        restaurant_name: item.restaurant_name,
-                        dish_id: item.dish_id,
-                        dish_name: item.dish_name,
-                        price: item.price,
-                        dish_category: item.dish_category,
-                        average_rating: item.average_rating,
-                        recommended: item.recommended,
-                        dish_images: item.images,
-                        reviews: re
-                    }
-                    console.log('resto dishes--------', restoDish);
-                    callback();
-                })
-                //callback()
-            }, function (err) {
-                console.log("final callback called");
-                res.send(restoDish);
-            })
-            //res.send(restoDish);
-        })
-    })
-
     app.get("/test", (req, res) => {
         //const query = new mongoose.Query();
         const query = dishRestaurantMappingSchema.find();
         query.setOptions({ explain: 'queryPlanner'});
         query.collection(dishRestaurantMappingSchema.collection);
-            query.where('restaurant_id', '5af6ae1cf36d280cecd2038c').exec(function name(params, result) {
-                console.log(result);
-                res.send(result)
-            })
-        //console.log(requet);
-        //res.send(JSON.stringify(requet));
-    })
-
-   /*  app.get("/getMenu", (req, res) => {
-        console.log(req.query);
-        var restoDish = [];
-        var reviewDetails = [];
-        async.waterfall([
-            function getDishesFromMapping(callback) {
-                dishRestaurantMappingSchema.find({ restaurant_id: req.query.rid }, function (err, menu) {
-                    if(err) throw err;
-                    callback(null, menu);
-                })
-            },
-            function getReviewsId(menu, callback) {
-                for(var i=0; i< menu.length; i++) {
-                    var reviewIds = menu[i].review_id;
-                    callback(null, reviewIds, i, menu);
-                }
-            },
-            function forOnReviews(reviewIds, menuIndex, menu, callback) {
-                for(var j=0; j< reviewIds.length; j++) {
-                    var userId = reviewIds[j].user_id;
-
-                    callback(null, userId, menuIndex, j, menu, reviewIds);
-                }
-            },
-            function getUserInfo(userId, menuIndex, reviewIndex, menu, reviewIds, callback) {
-                userSchema.findById(userId)
-                .then(userInfo => {
-                    reviewDetails[reviewIndex] = {
-                        _id: reviewIds[reviewIndex]._id,
-                        user_id: userInfo._id,
-                        user_first_name: userInfo.first_name,
-                        user_last_name: userInfo.last_name,
-                        foodie_level: userInfo.foodie_level,
-                        profile_image: userInfo.image,
-                        review: reviewIds[reviewIndex].review,
-                        review_images: reviewIds[reviewIndex].images
-                    }
-                    callback(null, userInfo, menuIndex, reviewIndex, menu, reviewIds, reviewDetails);
-                })
-            },
-            function menuObject(userInfo, menuIndex, reviewIndex, menu, reviewIds, reviewDetails, callback) {
-                restoDish[menuIndex] = {
-                    _id: menu[menuIndex]._id,
-                    restaurant_id: menu[menuIndex].restaurant_id,
-                    restaurant_name: menu[menuIndex].restaurant_name,
-                    dish_id: menu[menuIndex].dish_id,
-                    dish_name: menu[menuIndex].dish_name,
-                    price: menu[menuIndex].price,
-                    dish_category: menu[menuIndex].dish_category,
-                    average_rating: menu[menuIndex].average_rating,
-                    recommended: menu[menuIndex].recommended,
-                    dish_images: menu[menuIndex].images,
-                    reviews: reviewDetails
-                }
-                callback(null, restoDish);
-            }
-        ], function final(err, restoDish) {
-            console.log('restoDish---------', restoDish);
-            res.send(restoDish);
+        query.where('restaurant_id', '5af6ae1cf36d280cecd2038c').exec(function name(params, result) {
+            console.log(result);
+            res.send(result)
         })
-        
-    }) */
+    });
+
+    app.get("/getMenu", (req, res) => {
+        console.log(req.query)
+        var userId;
+        console.log('headers---------', req.headers)
+        var token = req.headers['x-access-token'];
+        console.log('token-----------', token);
+        if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
+
+        jwt.verify(token, process.env.JWT_SECRET, function (err, decoded) {
+            if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
+            else {
+                console.log('decoded-----------', decoded);
+                userId = decoded._id
+            }
+        });
+
+        dishRestaurantMappingSchema.find( {"restaurant_id": req.query.rid}, function name(err, menu) {
+            if(err) {
+                res.status(500).send({message: 'Please wait for some time and try again.',error: err })
+            } else {
+                res.status(200).send({message: "menu recevied", success: menu});
+            }
+        })
+    });
+
+  
 
     app.get("/getTopDishes", (req, res) => {
-        console.log(req.headers);
-        if (req.headers['x-access-token']) {
-            var dishes = [
-                {
-                    _id: 1,
-                    restaurant_id: "5af6ae1cf36d280cecd2038c",
-                    restaurant_name: "Mitti - Brewing Ideas",
-                    dish_id: "5af6a339ce31f73679fa88f4",
-                    dish_name: "Kaccha Coleslaw",
-                    price: 109,
-                    dish_category: "All Day Nashta",
-                    average_rating: 4.5,
-                    recommendation: 100,
-                    imageUrls: ["https://hips.hearstapps.com/ghk.h-cdn.co/assets/16/38/1600x1066/gallery-1474822198-how-to-make-pancakes.jpg?resize=768:*", "https://www.pexels.com/photo/blur-breakfast-close-up-dairy-product-376464/", "https://www.pexels.com/photo/chocolate-delicious-dessert-food-574111/", "https://www.pexels.com/photo/pancakes-with-strawberry-blueberries-and-maple-syrup-718739/"],
-                }, {
-                    _id: 2,
-                    restaurant_id: "5af6ae1cf36d280cecd2038c",
-                    restaurant_name: "Mitti - Brewing Ideas",
-                    dish_id: "5af6a339ce31f73679fa88f4",
-                    dish_name: "Kaccha Coleslaw",
-                    price: 109,
-                    dish_category: "All Day Nashta",
-                    average_rating: 4.5,
-                    recommendation: 100,
-                    imageUrls: ["https://www.pexels.com/photo/blur-breakfast-close-up-dairy-product-376464/", "https://www.pexels.com/photo/chocolate-delicious-dessert-food-574111/", "https://www.pexels.com/photo/pancakes-with-strawberry-blueberries-and-maple-syrup-718739/"],
-                }, {
-                    _id: 3,
-                    restaurant_id: "5af6ae1cf36d280cecd2038c",
-                    restaurant_name: "Mitti - Brewing Ideas",
-                    dish_id: "5af6a339ce31f73679fa88f4",
-                    dish_name: "Kaccha Coleslaw",
-                    price: 109,
-                    dish_category: "All Day Nashta",
-                    average_rating: 4.5,
-                    recommendation: 100,
-                    imageUrls: ["https://www.pexels.com/photo/blur-breakfast-close-up-dairy-product-376464/", "https://www.pexels.com/photo/chocolate-delicious-dessert-food-574111/", "https://www.pexels.com/photo/pancakes-with-strawberry-blueberries-and-maple-syrup-718739/"],
-                }, {
-                    _id: 4,
-                    restaurant_id: "5af6ae1cf36d280cecd2038c",
-                    restaurant_name: "Mitti - Brewing Ideas",
-                    dish_id: "5af6a339ce31f73679fa88f4",
-                    dish_name: "Kaccha Coleslaw",
-                    price: 109,
-                    dish_category: "All Day Nashta",
-                    average_rating: 4.5,
-                    recommendation: 100,
-                    imageUrls: ["https://www.pexels.com/photo/blur-breakfast-close-up-dairy-product-376464/", "https://www.pexels.com/photo/chocolate-delicious-dessert-food-574111/", "https://www.pexels.com/photo/pancakes-with-strawberry-blueberries-and-maple-syrup-718739/"],
-                }, {
-                    _id: 5,
-                    restaurant_id: "5af6ae1cf36d280cecd2038c",
-                    restaurant_name: "Mitti - Brewing Ideas",
-                    dish_id: "5af6a339ce31f73679fa88f4",
-                    dish_name: "Kaccha Coleslaw",
-                    price: 109,
-                    dish_category: "All Day Nashta",
-                    average_rating: 4.5,
-                    recommendation: 100,
-                    imageUrls: ["https://www.pexels.com/photo/blur-breakfast-close-up-dairy-product-376464/", "https://www.pexels.com/photo/chocolate-delicious-dessert-food-574111/", "https://www.pexels.com/photo/pancakes-with-strawberry-blueberries-and-maple-syrup-718739/"],
-                },
-            ];
-            res.send(dishes);
-        } else {
-            res.send('no token found');
-        }
-        
+        var userId;
+        console.log('headers---------', req.headers)
+        var token = req.headers['x-access-token'];
+        console.log('token-----------', token);
+        if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
 
-       
-        // dishSchema.find(function (err, users) {
-        //     res.json({ docs: users })
-        //     //res.send(users);
-        // });
+        jwt.verify(token, process.env.JWT_SECRET, function (err, decoded) {
+            if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
+            else {
+                console.log('decoded-----------', decoded);
+                userId = decoded._id
+            }
+        });
+        dishRestaurantMappingSchema.find({}, {}, {sort: {average_rating: -1}, limit: 10}, function name(err, topDishes) {
+            if(err) {
+                res.status(500).send({ message: 'Please wait for some time and try again.', error: err })
+            } else {
+                res.status(200).send({message: "Here are top 10 dishes", success: topDishes});
+            }
+        })
+      
     });
+
+    app.get("/getMenuData", (req, res) => {
+        dishRestaurantMappingSchema.find(function (err, resto) {
+            res.json({ docs: resto })
+        });
+    })
 
     app.get("/getTopDishRestaurants", (req, res) => {
         console.log("query param", req.query.tag);
@@ -379,7 +226,7 @@ module.exports = function dishRestaurantMappingAPI(app) {
     app.post("/addRecommendedDish", (req, res) => {
         console.log("req.body", req.body);
         var userId, review_id;
-        /* console.log('headers---------', req.headers)
+        console.log('headers---------', req.headers)
         var token = req.headers['x-access-token'];
         console.log('token-----------', token);
         if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
@@ -390,15 +237,15 @@ module.exports = function dishRestaurantMappingAPI(app) {
                 console.log('decoded-----------', decoded);
                 userId = decoded._id
             }
-        }); */
+        });
         var reviewData = new reviewSchema();
         reviewData.rating = 5;
         reviewData.recommended = true;
-        reviewData.user_id = req.body.userId;
+        //reviewData.user_id = req.body.userId;
         reviewData.review = '';
         reviewData.date = '';
         reviewData.images = [];
-        // reviewData.user_id = userId; 
+        reviewData.user_id = userId; 
         async.series([
             function saveReview(callback) {
                 reviewData.save(function (err, review) {
@@ -444,11 +291,12 @@ module.exports = function dishRestaurantMappingAPI(app) {
             if (err) throw err;
             userSchema.findOneAndUpdate(
                 {
-                    _id: req.body.userId
+                    _id: userId
                 },
                 {
                     $inc: {
-                        no_of_recommendations: 1
+                        no_of_recommendations: 1,
+                        no_of_reviews: 1
                     }
                 },
                 {

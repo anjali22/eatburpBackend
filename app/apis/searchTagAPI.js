@@ -44,5 +44,9 @@ module.exports = function searchTagAPI(app) {
             console.log(err);
             res.send("All good");
         })
+    });
+
+    app.get("/searchRestaurant", (req, res) => {
+        
     })
 }
