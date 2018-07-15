@@ -3,8 +3,8 @@ var reviewsSchema = require('./reviewSchema').schema;
 var reviewRef = require('./reviewSchema')
 
 var dishRestaurantMappingSchema = new mongoose.Schema({
-    restaurant_id: String, //index 
-    dish_id: String, //index
+    restaurant_id: [{ type: mongoose.Schema.Types.ObjectId, ref: 'restaurants' }], //index 
+    dish_id: [{ type: mongoose.Schema.Types.ObjectId, ref: 'dishes' }], //index
     price: Number,
     dish_category: String,
     review_id: [{ type: mongoose.Schema.Types.ObjectId, ref: 'reviews' }], //index
