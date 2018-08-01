@@ -129,7 +129,7 @@ module.exports = function dishRestaurantMappingAPI(app) {
         console.log(req.query)
         var userId;
         console.log('headers---------', req.headers)
-        var token = req.headers['x-access-token'];
+        /* var token = req.headers['x-access-token'];
         console.log('token-----------', token);
         if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
 
@@ -139,7 +139,7 @@ module.exports = function dishRestaurantMappingAPI(app) {
                 console.log('decoded-----------', decoded);
                 userId = decoded._id
             }
-        });
+        }); */
 
         dishRestaurantMappingSchema.find( {"restaurant_id": req.query.rid}, function name(err, menu) {
             if(err) {

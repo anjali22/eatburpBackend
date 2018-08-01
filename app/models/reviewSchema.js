@@ -4,7 +4,7 @@ var reviewSchema = new mongoose.Schema({
     review_id: Number,
     review: String,
     user: {
-        user_id: String,
+        user_id: String,    //index
         first_name: String,
         last_name: String
     }, 

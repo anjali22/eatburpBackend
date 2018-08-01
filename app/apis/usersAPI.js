@@ -1,10 +1,12 @@
 var users = require('../../app/models/user');
-
+var reviewSchema = require('../models/reviewSchema');
+var dishRestaurantMappingSchema = require('../models/dishRestaurantMappingSchema');
 var bodyParser = require('body-parser');
 var Promise = require('promise');
 var express = require('express');
 var bcrypt = require('bcrypt-nodejs');
 const jwt = require('jsonwebtoken');
+var async = require('async');
 
 var app = express();
 
@@ -126,4 +128,92 @@ module.exports = function usersAPI(app) {
         console.log(value);
         return value;
     };
+
+    app.get("/getUserReviews", (req, res) => {
+        console.log("req.header-------", req.header);
+        var user_id;
+        var token = req.headers['x-access-token'];
+        if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
+
+        jwt.verify(token, process.env.JWT_SECRET, function (err, decoded) {
+            if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
+            else {
+                console.log('decoded-----------', decoded);
+                user_id = decoded._id
+            }
+        });
+
+        reviewSchema.find({"user.user_id": user_id}, function name(err, reviews) {
+            if (err) {
+               return res.status(500).send({ message: 'Please wait for some time and try again.', error: err })
+            } else {
+                //res.status(200).send({ message: "All good", success: reviews });
+                let userReviews = [];
+                async.forEachOf(reviews, function (review, index, callback) {
+                    dishRestaurantMappingSchema.find({ "review_id": review._id }, function getDishDetail(err, dish) {
+                        if (err) {
+                            return res.status(500).send({ message: 'Please wait for some time and try again.', error: err })
+                        } else {
+                            console.log("review_id---------", review._id)
+                            console.log("dish detail----------", dish);
+                            userReviews[index] = {
+                                review: review,
+                                dish_detail: dish[0]
+                            }
+                        }
+                        callback(null, userReviews);
+                    })
+                }, function callbackFunction(err, result) {
+                    if(err) {
+                        return res.status(500).send({ message: 'Please wait for some time and try again.', error: err })
+                    }
+                    console.log("over here")
+                    res.status(200).send({ message: "All good", success: userReviews });
+                })
+            }
+        })
+    });
+
+    app.get("/getUserRecommendation", (req, res) => {
+        console.log("req.header-------", req.header);
+        var user_id;
+        var token = req.headers['x-access-token'];
+        if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
+
+        jwt.verify(token, process.env.JWT_SECRET, function (err, decoded) {
+            if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
+            else {
+                console.log('decoded-----------', decoded);
+                user_id = decoded._id
+            }
+        });
+
+        reviewSchema.find({ "user.user_id": user_id, "recommended": true }, function name(err, reviews) {
+            if (err) {
+                return res.status(500).send({ message: 'Please wait for some time and try again.', error: err })
+            } else {
+                //res.status(200).send({ message: "All good", success: reviews });
+                let userReviews = [];
+                async.forEachOf(reviews, function (review, index, callback) {
+                    dishRestaurantMappingSchema.find({ "review_id": review._id }, function getDishDetail(err, dish) {
+                        if (err) {
+                            return res.status(500).send({ message: 'Please wait for some time and try again.', error: err })
+                        } else {
+                            console.log("review_id---------", review._id)
+                            console.log("dish detail----------", dish);
+                            userReviews[index] = dish[0];
+                        }
+
+                        callback(null, userReviews);
+                    })
+                }, function callbackFunction(err, result) {
+                    if (err) {
+                        return res.status(500).send({ message: 'Please wait for some time and try again.', error: err })
+                    }
+                    console.log("over here")
+                    res.status(200).send({ message: "All good", success: userReviews });
+                })
+            }
+        })
+    })
 }

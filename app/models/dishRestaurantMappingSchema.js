@@ -15,13 +15,8 @@ var dishRestaurantMappingSchema = new mongoose.Schema({
     restaurant_name: String,
     search_tag: [String],
     reviews: {
-        type: [reviewsSchema],
-        validate:[reviewLimit, 'You have reached the limit']
+        type: [reviewsSchema]
     }
 });
-
-function reviewLimit(value) {
-    return value.length<=3;
-}
 
 module.exports = mongoose.model("dish_restaurant_mappings", dishRestaurantMappingSchema);

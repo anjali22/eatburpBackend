@@ -1,11 +1,13 @@
-var searchTag = require('../models/searchTagSchema');
-
 var bodyParser = require('body-parser');
 var Promise = require('promise');
 var express = require('express');
 const jwt = require('jsonwebtoken');
 var app = express();
 var async = require('async');
+
+var searchTag = require('../models/searchTagSchema');
+var restaurantSchema = require('../models/restaurantSchema');
+
 
 app.use(bodyParser.json()); // get information from html forms
 app.use(bodyParser.urlencoded({
@@ -47,6 +49,12 @@ module.exports = function searchTagAPI(app) {
     });
 
     app.get("/searchRestaurant", (req, res) => {
+        console.log(req.query);
+        restaurantSchema.find({"restaurant_name": {"$regex": req.query.r_name, "$options": "i"}}, function (err, results) {
+            if(err) return res.send(err);
+            console.log(results);
+            res.send(results);
+        })
         
     })
 }

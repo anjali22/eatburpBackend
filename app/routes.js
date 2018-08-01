@@ -334,7 +334,7 @@ module.exports = function (app, AWS) {
 
     app.get('/findReviews', function (req, res) {
         dishRestaurantMappingSchema.find({ _id: "5af6fd3ece31f73679fce2c3"})
-                                   .populate('review_id')
+                                   .populate('dish_id')
                                     .exec(function (err, story) {
                                         if (err) return handleError(err);
                                         console.log(story);
@@ -444,7 +444,6 @@ module.exports = function (app, AWS) {
             res.json({ docs: resto })
         });
     });
-
 
     app.get("/getDishes", (req, res) => {
         dishSchema.find(function (err, users) {

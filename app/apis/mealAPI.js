@@ -1,5 +1,5 @@
 var mealSchema = require('../models/mealSchema');
-
+var dishRestaurantMappingSchema = require('../models/dishRestaurantMappingSchema');
 var bodyParser = require('body-parser');
 var Promise = require('promise');
 var express = require('express');
@@ -24,5 +24,20 @@ module.exports = function mealAPI(app) {
             }
             res.send(JSON.stringify({ "results": results }));
         });
+    });
+
+    app.get('/topDishesOfMeal', (req, res) => {
+        console.log("req.query", req.query);
+        dishRestaurantMappingSchema.find(
+                                { "meal": req.query.meal }, 
+                                {}, 
+                                { sort: { average_rating: -1 }, limit: 10 },
+                                function name(err, dishes) {
+                                    if (err) {
+                                        res.status(500).send({ message: 'Please wait for some time and try again.', error: err })
+                                    } else {
+                                        res.status(200).send({ message: "Here are top 10 dishes", success: dishes });
+                                    }
+                                })
     })
 }
