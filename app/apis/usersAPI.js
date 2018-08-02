@@ -133,6 +133,7 @@ module.exports = function usersAPI(app) {
         console.log("req.header-------", req.header);
         var user_id;
         var token = req.headers['x-access-token'];
+        console.log(token);
         if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
 
         jwt.verify(token, process.env.JWT_SECRET, function (err, decoded) {
@@ -154,8 +155,8 @@ module.exports = function usersAPI(app) {
                         if (err) {
                             return res.status(500).send({ message: 'Please wait for some time and try again.', error: err })
                         } else {
-                            console.log("review_id---------", review._id)
-                            console.log("dish detail----------", dish);
+                            //console.log("review_id---------", review._id)
+                            //console.log("dish detail----------", dish);
                             userReviews[index] = {
                                 review: review,
                                 dish_detail: dish[0]

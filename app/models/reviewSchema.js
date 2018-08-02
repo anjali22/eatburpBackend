@@ -4,7 +4,7 @@ var reviewSchema = new mongoose.Schema({
     review_id: Number,
     review: String,
     user: {
-        user_id: String,    //index
+        user_id: [{ type: mongoose.Schema.Types.ObjectId, ref: 'users'}],    //index
         first_name: String,
         last_name: String
     }, 
