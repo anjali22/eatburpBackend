@@ -162,11 +162,11 @@ module.exports = function dishRestaurantMappingAPI(app) {
         if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
 
         jwt.verify(token, process.env.JWT_SECRET, function (err, decoded) {
-            //if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
-            //else {
+            if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
+            else {
                 console.log('decoded-----------', decoded);
                 userId = decoded._id
-            //}
+            }
         });
         dishRestaurantMappingSchema.find({}, {}, {sort: {average_rating: -1}, limit: 10}, function name(err, topDishes) {
             if(err) {
