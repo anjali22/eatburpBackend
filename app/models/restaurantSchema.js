@@ -1,4 +1,5 @@
 var mongoose = require('mongoose');
+var reviewsSchema = require('./reviewSchema').schema;
 
 //restaurant data
 var restaurantSchema = new mongoose.Schema({
@@ -15,7 +16,7 @@ var restaurantSchema = new mongoose.Schema({
         country: String
     },
     phone_number: String,
-    average_cost_for_two: String,
+    average_cost_for_two: Number,
     open_time: String,
     close_time: String,
     rush_hours: String,
@@ -25,8 +26,12 @@ var restaurantSchema = new mongoose.Schema({
     famous_dishes: [String],
     images: [String],
     days_closed: [String],
-    reviews: [String],
+    reviews: {
+        type: [reviewsSchema]
+    },
     average_rating: Number, //index
-    cuisines: [String]
+    cuisines: [String],
+    recommended: Number,
+    review_id: [{ type: mongoose.Schema.Types.ObjectId, ref: 'reviews' }], //index
 });
 module.exports = mongoose.model("restaurants", restaurantSchema);

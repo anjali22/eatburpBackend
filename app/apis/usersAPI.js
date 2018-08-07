@@ -1,4 +1,4 @@
-var users = require('../../app/models/user');
+var users = require('../../app/models/users');
 var reviewSchema = require('../models/reviewSchema');
 var dishRestaurantMappingSchema = require('../models/dishRestaurantMappingSchema');
 var bodyParser = require('body-parser');

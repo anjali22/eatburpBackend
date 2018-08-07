@@ -3,11 +3,13 @@ var dishSchema = require('../app/models/dishSchema');
 var reviewSchema = require('../app/models/reviewSchema');
 var dishRestaurantMappingSchema = require('../app/models/dishRestaurantMappingSchema');
 var employee = require('../app/models/employeeSchema');
+var userSchema = require('../app/models/users');
 
 var bodyParser = require('body-parser');
 var Promise = require('promise');
 var express = require('express');
 const jwt = require('jsonwebtoken');
+var ObjectId = require('mongoose').Types.ObjectId;
 
 var app = express();
 
@@ -175,7 +177,7 @@ module.exports = function (app, AWS) {
                         }
                     }
                 }
-            )
+                )
         })
     });
 
@@ -228,7 +230,7 @@ module.exports = function (app, AWS) {
         });
     })
 
-    app.post("/addReview", (req, res, next) => {
+    app.post("/addDishReview", (req, res, next) => {
         console.log("req----------", req.files);
         console.log(req.body);
         upload(req, res, function multerUpload(err) {
@@ -237,7 +239,7 @@ module.exports = function (app, AWS) {
                 console.log(err)
                 res.send("issue with saving");
             } else {
-                var user_id;
+                var user_id, review_id, reviewSaved;
                 console.log('headers---------', req.headers)
                 var token = req.headers['x-access-token'];
                 if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
@@ -249,98 +251,214 @@ module.exports = function (app, AWS) {
                         user_id = decoded._id
                     }
                 });
-                if (req.files) {
-                    multipleFile(req)
+                multipleFile(req)
                     .then(element => {
                         console.log("body-----------", req.body);
-                        console.log("element--------", element);
-                        req.body.images = element;
-                        console.log("req.body-----------", req.body)
-                        var reviewData = new reviewSchema(req.body);
-                        reviewData.user.user_id = req.body.user_id;
-                        reviewData.save()
-                        .then(review => {
-                            console.log("review added", review);
-                            dishRestaurantMappingSchema.findOneAndUpdate(
-                                {
-                                    "restaurant_id": req.body.restaurant_id,
-                                    "_id": req.body.mapping_id
-                                },
-                                {
-                                    $push: {
-                                        review_id: review._id,
-                                        reviews: { $each: [review], $sort: { date: -1 }, $slice: 3 }
+                        var reviewData = new reviewSchema();
+                        reviewData.rating = req.body.rating;
+                        reviewData.recommended = req.body.rating === "5" ? true : false;
+                        reviewData.review = req.body.review;
+                        reviewData.images = element;
+                        reviewData.user.user_id = new ObjectId(user_id);
+                        reviewData.user.first_name = '';
+                        reviewData.user.last_name = '';
+                        async.series([
+                            function saveReview(callback) {
+                                reviewData.save(function (err, review) {
+                                    if (err) {
+                                        console.log(err);
+                                        callback(err);
                                     }
-                                }
-                            )
-                                .then(item => {
-                                    console.log("item found", item);
-                                    res.status(200).send({ "message": "Here are the reviews", success: item });
+                                    console.log("review id------", review._id);
+                                    review_id = review._id;
+                                    reviewSaved = review
+                                    callback();
                                 })
-                                .catch(err => {
-                                    console.log(err);
-                                    res.status(400).send({ "message": "Please try in some time", error: err })
-                                });
-                        })
-                        .catch(err => {
-                            console.log("error---------", err);
-                            res.status(400).send({ "message": "Please try in some time", error: err })
-                        });
+                            },
+
+                            function addRecommendValueInDishRestoMapping(callback) {
+                                dishRestaurantMappingSchema.findOneAndUpdate(
+                                    {
+                                        //"restaurant_id": req.body.restaurant_id,
+                                        _id: req.body.mapping_id
+                                    },
+                                    {
+                                        $push: {
+                                            review_id: review_id,
+                                            reviews: { $each: [reviewSaved], $sort: { date: -1 }, $slice: 3 }
+                                        },
+                                        $inc: {
+                                            recommended: req.body.rating === "5" ? 1 : 0
+                                        }
+                                    },
+                                    {
+                                        upsert: true,
+                                        new: true
+                                    },
+                                    function (err, result) {
+                                        if (err) {
+                                            console.log("error in storing resto item data 1-------", err);
+                                            callback(err);
+                                        } else {
+                                            console.log("stored data------- 1", result);
+                                            callback(null, result);
+                                        }
+                                    }
+                                )
+                            }
+                        ],
+                            function increaseCountOfUserReview(err, results) {
+                                if (err) throw err;
+                                userSchema.findOneAndUpdate(
+                                    {
+                                        _id: user_id
+                                    },
+                                    {
+                                        $inc: {
+                                            no_of_recommendations: req.body.rating === "5" ? 1 : 0,
+                                            no_of_reviews: 1
+                                        }
+                                    },
+                                    function (err, result) {
+                                        if (err) {
+                                            console.log("error in storing resto item data 2--------", err);
+                                            //callback(err);
+                                        } else {
+                                            console.log("stored data------- 2", result);
+                                            //callback(result);
+                                            res.status(200).send({ message: "successful", success: results[1] })
+                                            //res.send(results[1]);
+                                        }
+                                    }
+                                )
+                            })
                     }).catch(err => {
                         console.log("error---------", err);
                         res.status(400).send({ "message": "Please try in some time", error: err })
                     })
-                } else {
-                    console.log("inside else--------");
-                    console.log("req.body-----------", req.body)
-                    var reviewData = new reviewSchema(req.body);
-                    reviewData.user.user_id = user_id;
-                    reviewData.save(function (err) {
-                        if(err) {
-                            res.status(400).send({"message": "Please try in some time", error: err})
-                        }
-                    })
-                    .then(review => {
-                        console.log("review added",review);
-                        dishRestaurantMappingSchema.findOneAndUpdate(
-                            {
-                                "restaurant_id": req.body.restaurant_id, 
-                                "_id": req.body.mapping_id
+            }
+        })
+    });
+
+    app.post("/addRestaurantReview", (req, res, next) => {
+        console.log("req----------", req.files);
+        console.log(req.body);
+        upload(req, res, function multerUpload(err) {
+            //console.log("req inside upload------", req)
+            if (err) {
+                console.log(err)
+                res.send("issue with saving");
+            } else {
+                var user_id, review_id, reviewSaved;
+                console.log('headers---------', req.headers)
+                var token = req.headers['x-access-token'];
+                if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
+
+                jwt.verify(token, process.env.JWT_SECRET, function (err, decoded) {
+                    if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
+                    else {
+                        console.log('decoded-----------', decoded);
+                        user_id = decoded._id
+                    }
+                });
+                multipleFile(req)
+                    .then(element => {
+                        console.log("body-----------", req.body);
+                        var reviewData = new reviewSchema();
+                        reviewData.rating = req.body.rating;
+                        reviewData.recommended = req.body.rating === "5" ? true : false;
+                        reviewData.review = req.body.review;
+                        reviewData.images = element;
+                        reviewData.user.user_id = new ObjectId(user_id);
+                        reviewData.user.first_name = '';
+                        reviewData.user.last_name = '';
+                        async.series([
+                            function saveReview(callback) {
+                                reviewData.save(function (err, review) {
+                                    if (err) {
+                                        console.log(err);
+                                        callback(err);
+                                    }
+                                    console.log("review id------", review._id);
+                                    review_id = review._id;
+                                    reviewSaved = review
+                                    callback();
+                                })
                             },
-                            {
-                                $push: {
-                                    review_id: review._id,
-                                    reviews: { $each: [review], $sort:{date: -1}, $slice: 3 } 
-                                }
+
+                            function addRecommendValueInDishRestoMapping(callback) {
+                                restaurantSchema.findOneAndUpdate(
+                                    {
+                                        //"restaurant_id": req.body.restaurant_id,
+                                        _id: req.body.restaurant_id
+                                    },
+                                    {
+                                        $push: {
+                                            review_id: review_id,
+                                            reviews: { $each: [reviewSaved], $sort: { date: -1 }, $slice: 3 }
+                                        },
+                                        $inc: {
+                                            recommended: req.body.rating === "5" ? 1 : 0
+                                        }
+                                    },
+                                    {
+                                        upsert: true,
+                                        new: true
+                                    },
+                                    function (err, result) {
+                                        if (err) {
+                                            console.log("error in storing resto item data 1-------", err);
+                                            callback(err);
+                                        } else {
+                                            console.log("stored data------- 1", result);
+                                            callback(null, result);
+                                        }
+                                    }
+                                )
                             }
-                        )
-                        .then(item => {
-                            console.log("item found",item);
-                            res.status(200).send({ "message": "Here are the reviews", success: item });
-                        })
-                        .catch(err=> {
-                            console.log(err);
-                            res.status(400).send({ "message": "Please try in some time", error: err })
-                        });
-                    })
-                    .catch(err => {
-                        console.log("error---------",err);
+                        ],
+                            function increaseCountOfUserReview(err, results) {
+                                if (err) throw err;
+                                userSchema.findOneAndUpdate(
+                                    {
+                                        _id: user_id
+                                    },
+                                    {
+                                        $inc: {
+                                            no_of_recommendations: req.body.rating === "5" ? 1 : 0,
+                                            no_of_reviews: 1
+                                        }
+                                    },
+                                    function (err, result) {
+                                        if (err) {
+                                            console.log("error in storing resto item data 2--------", err);
+                                            //callback(err);
+                                        } else {
+                                            console.log("stored data------- 2", result);
+                                            //callback(result);
+                                            res.status(200).send({ message: "successful", success: results[1] })
+                                            //res.send(results[1]);
+                                        }
+                                    }
+                                )
+                            })
+                    }).catch(err => {
+                        console.log("error---------", err);
                         res.status(400).send({ "message": "Please try in some time", error: err })
-                    });
-                }
+                    })
             }
         })
     });
 
     app.get('/findReviews', function (req, res) {
-        dishRestaurantMappingSchema.find({ _id: "5af6fd3ece31f73679fce2c3"})
-                                   .populate('dish_id')
-                                    .exec(function (err, story) {
-                                        if (err) return handleError(err);
-                                        console.log(story);
-                                        res.send(story);
-                                        // prints "The author is Ian Fleming"
-                                    });
+        dishRestaurantMappingSchema.find({ _id: "5af6fd3ece31f73679fce2c3" })
+            .populate('dish_id')
+            .exec(function (err, story) {
+                if (err) return handleError(err);
+                console.log(story);
+                res.send(story);
+                // prints "The author is Ian Fleming"
+            });
     })
 
 
@@ -361,14 +479,14 @@ module.exports = function (app, AWS) {
                 console.log(err)
             } else {
                 multipleFile(req)
-                .then(element => {
-                    console.log("body-----------", req.body);
-                    console.log("element--------", element);
-                    res.send("uploaded successfully")
-                })
-                .catch(err => {
-                    console.log("error---------", err)
-                })
+                    .then(element => {
+                        console.log("body-----------", req.body);
+                        console.log("element--------", element);
+                        res.send("uploaded successfully")
+                    })
+                    .catch(err => {
+                        console.log("error---------", err)
+                    })
             }
         })
 
@@ -450,4 +568,14 @@ module.exports = function (app, AWS) {
             res.json({ docs: users })
         });
     });
+
+    app.get("/getSelectedRestaurant", (req, res) => {
+        restaurantSchema.find({ "_id": req.query.id }, function (err, restaurant) {
+            if (err) {
+                res.status(500).send({ message: 'Please wait for some time and try again.', error: err })
+            } else {
+                res.status(200).send({ message: "Here are top 10 dishes", success: restaurant });
+            }
+        })
+    })
 }
