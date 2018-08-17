@@ -16,7 +16,7 @@ var restaurantSchema = new mongoose.Schema({
         country: String
     },
     phone_number: String,
-    average_cost_for_two: Number,
+    average_cost_for_two: 0,
     open_time: String,
     close_time: String,
     rush_hours: String,
