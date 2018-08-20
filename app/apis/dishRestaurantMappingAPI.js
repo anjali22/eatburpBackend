@@ -20,6 +20,7 @@ app.use(bodyParser.urlencoded({
 }));
 
 module.exports = function dishRestaurantMappingAPI(app) {
+    //For Angular app
     app.post("/addMenu", (req, res) => {
         console.log(req.body);
         async.forEach(req.body.inputFields, function forOneObject(inputField, callback) {
@@ -51,7 +52,7 @@ module.exports = function dishRestaurantMappingAPI(app) {
                                 "dish_name": inputField.dish_name,
                                 "cuisine": inputField.cuisine,
                                 "meal": inputField.meal,
-                                "type": inputField.meal,
+                                "type": inputField.type,
                                 "search_tag": inputField.search_tag,
                                 "images": []
                             }
@@ -79,17 +80,22 @@ module.exports = function dishRestaurantMappingAPI(app) {
                     {
                         $setOnInsert: {
                             "restaurant_id": inputField.restaurant_id,
+                            "locality": inputField.locality,
                             "dish_name": inputField.dish_name,
                             "restaurant_name": inputField.restaurant_name,
                             "dish_id": results[1]._id,
+                            "meal": results[1].meal,
+                            "cuisine": results[1].cuisine,
                             "price": inputField.price,
                             "search_tag": inputField.search_tag,
-                            "dish_category": inputField.dish_category,
+                            "dish_category": inputField.category,
                             "review_id": [],
                             "average_rating": 0,
                             "images": [],
                             "recommended": 0,
-                            "reviews": []
+                            "reviews": [],
+                            "review_counts": 0,
+                            "experimental_dish": false
                         }
                     },
                     {
@@ -131,7 +137,7 @@ module.exports = function dishRestaurantMappingAPI(app) {
         console.log(req.query)
         var userId;
         console.log('headers---------', req.headers)
-        /* var token = req.headers['x-access-token'];
+        var token = req.headers['x-access-token'];
         console.log('token-----------', token);
         if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
 
@@ -141,7 +147,7 @@ module.exports = function dishRestaurantMappingAPI(app) {
                 console.log('decoded-----------', decoded);
                 userId = decoded._id
             }
-        }); */
+        });
 
         dishRestaurantMappingSchema.find( {"restaurant_id": req.query.rid}, function name(err, menu) {
             if(err) {
@@ -151,8 +157,6 @@ module.exports = function dishRestaurantMappingAPI(app) {
             }
         })
     });
-
-  
 
     app.get("/getTopDishes", (req, res) => {
         var userId;
@@ -178,47 +182,20 @@ module.exports = function dishRestaurantMappingAPI(app) {
       
     });
 
+    //For postman purpose
     app.get("/getMenuData", (req, res) => {
-        dishRestaurantMappingSchema.find(function (err, resto) {
-            res.json({ docs: resto })
+        dishRestaurantMappingSchema.find(function (err, results) {
+            if (err) {
+                res.status(500).send({ message: 'Please wait for some time and try again.', error: err })
+            } else {
+                res.status(200).send({ message: "Here are top 10 dishes", success: results });
+            }        
         });
     })
 
-    app.get("/getTopDishRestaurants", (req, res) => {
-        console.log("query param", req.query.tag);
-        tag = req.query.tag;;
-        //find those dishes which have searchtag we got above
-        dishSchema.find({ search_tag: tag }, function (err, dishes) {
-            if (err) throw err;
-            var topRestaurants = [];
-            console.log('dishes-------', dishes);
-            async.forEachOf(dishes, function (dish, index, callback) {
-                dishRestaurantMappingSchema.find({ dish_id: dish._id }, function (error, mapping) {
-                    mapping[0].dish_name = 'Test Dish';
-                    mapping[0].restaurant_name = 'Test restaurant';
-                    topRestaurants.push(mapping[0]);
-                    console.log("mappinggggggggggggggggggg", mapping[0]);
-                    callback();
-                })
-            }, function (err) {
-                if (err) {
-                    console.log(err);
-                }
-                console.log('top restaurantssssss', topRestaurants);
-                topRestaurants.sort(function (a, b) {
-                    console.log('ave rating', a.average_rating, b.average_rating);
-                    return b.average_rating - a.average_rating;
-                });
-                console.log('top restaurantssssss after sorting-------', topRestaurants);
-                console.log(topRestaurants.slice(0, 10));
-                res.send(topRestaurants);
-            })
-        })
-    });
-
     app.post("/addRecommendedDish", (req, res) => {
         console.log("req.body", req.body);
-        var userId, review_id;
+        var userId, review_id, review_rating, average_rating;
         console.log('headers---------', req.headers)
         var token = req.headers['x-access-token'];
         console.log('token-----------', token);
@@ -247,6 +224,7 @@ module.exports = function dishRestaurantMappingAPI(app) {
                     }
                     console.log("review id------", review._id);
                     review_id = review._id;
+                    review_rating = review.rating;
                     callback();
                 })
             },
@@ -257,11 +235,13 @@ module.exports = function dishRestaurantMappingAPI(app) {
                        _id: req.body.mappingId
                     },
                     {
-                        $push: {
-                            review_id: review_id
+                        review_id: {
+                            id: review_id,
+                            rating: review_rating
                         },
                         $inc: { 
-                            recommended: 1 
+                            recommended: 1,
+                            review_counts: 1
                         } 
                     },
                     {
@@ -274,6 +254,58 @@ module.exports = function dishRestaurantMappingAPI(app) {
                             callback(err);
                         } else {
                             console.log("stored data------- 1", result);
+                            callback(null, result);
+                        }
+                    }
+                )
+            },
+
+            function calculateAverage(callback) {
+                // To calculate average rating using aggregate of mongo
+                dishRestaurantMappingSchema.aggregate([
+                    {
+                        $match: {
+                            _id: ObjectId(req.body.mappingId)
+                        }
+                    },
+                    {
+                        $project: {
+                            average_rating: { $avg: "$review_id.rating" }
+                        }
+                    }
+
+                ], function (err, result) {
+                    if (err) {
+                        console.log("error in storing average rating-------", err);
+                        callback(err);
+                    } else {
+                        console.log("average rating----------", result);
+                        average_rating = result[0].average_rating;
+                        callback(null, result);
+                    }
+                })
+            },
+
+            function saveAverageRating(callback) {
+                // To calculate average rating using aggregate of mongo
+                dishRestaurantMappingSchema.findOneAndUpdate(
+                    {
+                        //"restaurant_id": req.body.restaurant_id,
+                        _id: req.body.mappingId
+                    },
+                    {
+                        average_rating: average_rating
+                    },
+                    {
+                        upsert: true,
+                        new: true
+                    },
+                    function (err, result) {
+                        if (err) {
+                            console.log("error in storing resto item data 1-------", err);
+                            callback(err);
+                        } else {
+                            console.log("stored data average rating", result);
                             callback(null, result);
                         }
                     }
@@ -295,6 +327,7 @@ module.exports = function dishRestaurantMappingAPI(app) {
                 function (err, result) {
                     if (err) {
                         console.log("error in storing resto item data 2--------", err);
+                        res.status(400).send({ message: "Please try in some time", error: err })
                         //callback(err);
                     } else {
                         console.log("stored data------- 2", result);
@@ -309,7 +342,7 @@ module.exports = function dishRestaurantMappingAPI(app) {
 
     app.post("/addRecommendedRestaurant", (req, res) => {
         console.log("req.body", req.body);
-        var userId, review_id;
+        var userId, review_id, review_rating, average_rating;
         console.log('headers---------', req.headers)
         var token = req.headers['x-access-token'];
         console.log('token-----------', token);
@@ -338,6 +371,7 @@ module.exports = function dishRestaurantMappingAPI(app) {
                     }
                     console.log("review id------", review._id);
                     review_id = review._id;
+                    review_rating = review.rating;
                     callback();
                 })
             },
@@ -349,10 +383,14 @@ module.exports = function dishRestaurantMappingAPI(app) {
                     },
                     {
                         $push: {
-                            review_id: review_id
+                            review_id: {
+                                id: review_id,
+                                rating: review_rating
+                            }
                         },
                         $inc: {
-                            recommended: 1
+                            recommended: 1,
+                            review_counts: 1
                         }
                     },
                     {
@@ -365,6 +403,58 @@ module.exports = function dishRestaurantMappingAPI(app) {
                             callback(err);
                         } else {
                             console.log("stored data------- 1", result);
+                            callback(null, result);
+                        }
+                    }
+                )
+            },
+
+            function calculateAverage(callback) {
+                // To calculate average rating using aggregate of mongo
+                restaurantSchema.aggregate([
+                    {
+                        $match: {
+                            _id: ObjectId(req.body.restaurant_id)
+                        }
+                    },
+                    {
+                        $project: {
+                            average_rating: { $avg: "$review_id.rating" }
+                        }
+                    }
+
+                ], function (err, result) {
+                    if (err) {
+                        console.log("error in storing average rating-------", err);
+                        callback(err);
+                    } else {
+                        console.log("average rating----------", result);
+                        average_rating = result[0].average_rating;
+                        callback(null, result);
+                    }
+                })
+            },
+
+            function saveAverageRating(callback) {
+                // To calculate average rating using aggregate of mongo
+                restaurantSchema.findOneAndUpdate(
+                    {
+                        //"restaurant_id": req.body.restaurant_id,
+                        _id: req.body.restaurant_id
+                    },
+                    {
+                        average_rating: average_rating
+                    },
+                    {
+                        upsert: true,
+                        new: true
+                    },
+                    function (err, result) {
+                        if (err) {
+                            console.log("error in storing resto item data 1-------", err);
+                            callback(err);
+                        } else {
+                            console.log("stored data average rating", result);
                             callback(null, result);
                         }
                     }
@@ -386,6 +476,7 @@ module.exports = function dishRestaurantMappingAPI(app) {
                     function (err, result) {
                         if (err) {
                             console.log("error in storing resto item data 2--------", err);
+                            res.status(400).send({ message: "Please try in some time", error: err })
                             //callback(err);
                         } else {
                             console.log("stored data------- 2", result);

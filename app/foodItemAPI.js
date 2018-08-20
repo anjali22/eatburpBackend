@@ -34,7 +34,6 @@ var logger = new winston.Logger({
     ]
 });
 
-
 module.exports = function foodItemAPIs(app) {
     var imageSaving = require('./s3ImageSaving')();
     //console.log('this is-----------', typeof(multipleFile.upload));
@@ -44,10 +43,16 @@ module.exports = function foodItemAPIs(app) {
         //res.sendFile(__dirname + '/addResto.html');
     });
 
+    //For postman purpose
     app.get("/getFoodItems", (req, res) => {
-        dishSchema.find(function (err, items) {
-            res.json({ docs: items })
-            //res.send(users);
+        dishSchema.find(function (err, results) {
+            if (err) {
+                console.log("error in storing resto item data 2--------", err);
+                res.status(400).send({ message: "Please try in some time", error: err })
+            } else {
+                console.log("stored data------- 2", results);
+                res.status(200).send({ message: "successful", success: results})
+            }
         });
     });
 

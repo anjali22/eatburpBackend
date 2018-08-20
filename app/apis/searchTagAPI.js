@@ -15,14 +15,19 @@ app.use(bodyParser.urlencoded({
 }));
 
 module.exports = function searchTagAPI(app) {
+
+    // For postman purpose
     app.get('/getSearchTags', (req, res) => {
         searchTag.find(function (err, tags) {
-            if (err) return console.error(err);
-            res.send(JSON.stringify({ "results": tags }));
+            if (err) {
+                res.status(500).send({ message: 'Please wait for some time and try again.', error: err })
+            } else {
+                res.status(200).send({ message: "Here are top 10 dishes", success: tags });
             }
-        );
+        });
     })
 
+    //For angular app
     app.post('/createSearchTags', (req, res) => {
         async.forEachOf(req.body.search_tag, function (tag, index, callback) {
             searchTag.findOneAndUpdate (
@@ -50,21 +55,44 @@ module.exports = function searchTagAPI(app) {
 
     app.get("/searchRestaurants", (req, res) => {
         console.log(req.query);
-        restaurantSchema.find({ "restaurant_name": { "$regex": req.query.searchedText, "$options": "i"}}, function (err, results) {
-            if(err) return res.send(err);
-            console.log(results);
-            res.send(results);
-        })
-        
+        restaurantSchema.find(
+                { 
+                    "restaurant_name": 
+                        { "$regex": req.query.searchedText, "$options": "i"}
+                }, 
+                function (err, results) {
+                    if (err) {
+                        console.log("error in storing resto item data 2--------", err);
+                        res.status(400).send({ message: "Please try in some time", error: err })
+                    } else {
+                        console.log("stored data------- 2", results);
+                        res.status(200).send({ message: "successful", success: results })
+                    }
+                }
+            )
     });
 
     app.get("/searchDishes", (req, res) => {
         console.log(req.query);
-        searchTag.find({ "search_tag": { "$regex": req.query.searchedText, "$options": "i" } }, {_id: 0}, function (err, results) {
-            if (err) return res.send(err);
-            console.log(results);
-            res.send(results);
-        })
+        searchTag.find(
+            { 
+                "search_tag": { 
+                    "$regex": req.query.searchedText, "$options": "i" 
+                } 
+            }, 
+            {
+                _id: 0
+            }, 
+            function (err, results) {
+                if (err) {
+                    console.log("error in storing resto item data 2--------", err);
+                    res.status(400).send({ message: "Please try in some time", error: err })
+                } else {
+                    console.log("stored data------- 2", results);
+                    res.status(200).send({ message: "successful", success: results })
+                }
+            }
+        )
 
     });
 
@@ -74,11 +102,16 @@ module.exports = function searchTagAPI(app) {
             { "search_tag": req.query.search_tag }, 
             {}, 
             { sort: { average_rating: -1 }, limit: 10 },
-            function (err, results) {
-                if (err) return res.send(err);
-                console.log(results);
-                res.send(results);
-            }
         )
+            .populate('review_id')
+            .exec(function (err, results) {
+                if (err) {
+                    console.log("error in storing resto item data 2--------", err);
+                    res.status(400).send({ message: "Please try in some time", error: err })
+                } else {
+                    console.log("stored data------- 2", results);
+                    res.status(200).send({ message: "successful", success: results})
+                }
+            })
     })
 }

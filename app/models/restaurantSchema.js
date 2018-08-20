@@ -32,6 +32,8 @@ var restaurantSchema = new mongoose.Schema({
     average_rating: Number, //index
     cuisines: [String],
     recommended: Number,
-    review_id: [{ type: mongoose.Schema.Types.ObjectId, ref: 'reviews' }], //index
+    review_id: [{ review_id: { type: mongoose.Schema.Types.ObjectId, ref: 'reviews' }, rating: Number }], //index
+    experimental_dishes: [{type: mongoose.Schema.Types.ObjectId, ref: 'dishes'}],
+    review_counts: Number
 });
 module.exports = mongoose.model("restaurants", restaurantSchema);

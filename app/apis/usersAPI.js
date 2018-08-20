@@ -112,12 +112,13 @@ module.exports = function usersAPI(app) {
             }
         });
         
-        users.findById(user_id, function (err, user) {
-            if(err) {
-                return res.json({"error": err});
+        users.findById(user_id, function (err, results) {
+            if (err) {
+                console.log("error in storing resto item data 2--------", err);
+                res.status(400).send({ message: "Please try in some time", error: err })
             } else {
-                console.log('user', user);
-                res.send(user)
+                console.log("stored data------- 2", results);
+                res.status(200).send({ message: "successful", success: results })
             }
         })
     })
@@ -140,7 +141,7 @@ module.exports = function usersAPI(app) {
             if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
             else {
                 console.log('decoded-----------', decoded);
-                user_id = decoded._id
+                user_id = decoded._id;
             }
         });
 

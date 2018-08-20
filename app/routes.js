@@ -217,19 +217,6 @@ module.exports = function (app, AWS) {
         })
     });
 
-    app.get("/getMyReviews", (req, res) => {
-        var token = req.headers['x-access-token'];
-        if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
-
-        jwt.verify(token, process.env.JWT_SECRET, function (err, decoded) {
-            if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
-            else {
-                console.log('decoded-----------', decoded);
-                user_id = decoded._id
-            }
-        });
-    })
-
     app.post("/addDishReview", (req, res, next) => {
         console.log("req----------", req.files);
         console.log(req.body);
@@ -239,7 +226,7 @@ module.exports = function (app, AWS) {
                 console.log(err)
                 res.send("issue with saving");
             } else {
-                var user_id, review_id, reviewSaved;
+                var user_id, review_id, reviewSaved, review_rating, average_rating;
                 console.log('headers---------', req.headers)
                 var token = req.headers['x-access-token'];
                 if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
@@ -271,6 +258,7 @@ module.exports = function (app, AWS) {
                                     }
                                     console.log("review id------", review._id);
                                     review_id = review._id;
+                                    review_rating = review.rating;
                                     reviewSaved = review
                                     callback();
                                 })
@@ -284,11 +272,15 @@ module.exports = function (app, AWS) {
                                     },
                                     {
                                         $push: {
-                                            review_id: review_id,
+                                            review_id: {
+                                                id: review_id, 
+                                                rating: review_rating
+                                            },
                                             reviews: { $each: [reviewSaved], $sort: { date: -1 }, $slice: 3 }
                                         },
                                         $inc: {
-                                            recommended: req.body.rating === "5" ? 1 : 0
+                                            recommended: req.body.rating === "5" ? 1 : 0,
+                                            review_counts: 1
                                         }
                                     },
                                     {
@@ -301,6 +293,58 @@ module.exports = function (app, AWS) {
                                             callback(err);
                                         } else {
                                             console.log("stored data------- 1", result);
+                                            callback(null, result);
+                                        }
+                                    }
+                                )
+                            },
+
+                            function calculateAverage(callback) {
+                                // To calculate average rating using aggregate of mongo
+                                dishRestaurantMappingSchema.aggregate([
+                                    {
+                                        $match: {
+                                            _id: ObjectId(req.body.mapping_id)
+                                        }
+                                    },
+                                    {
+                                        $project: {
+                                            average_rating: {$avg: "$review_id.rating"}
+                                        }
+                                    }
+                                    
+                                ], function (err, result) {
+                                    if (err) {
+                                        console.log("error in storing average rating-------", err);
+                                        callback(err);
+                                    } else {
+                                        console.log("average rating----------", result);
+                                        average_rating = result[0].average_rating;
+                                        callback(null, result);
+                                    }
+                                })
+                            },
+
+                            function saveAverageRating(callback) {
+                                // To calculate average rating using aggregate of mongo
+                                dishRestaurantMappingSchema.findOneAndUpdate(
+                                    {
+                                        //"restaurant_id": req.body.restaurant_id,
+                                        _id: req.body.mapping_id
+                                    },
+                                    {
+                                        average_rating: average_rating
+                                    },
+                                    {
+                                        upsert: true,
+                                        new: true
+                                    },
+                                    function (err, result) {
+                                        if (err) {
+                                            console.log("error in storing resto item data 1-------", err);
+                                            callback(err);
+                                        } else {
+                                            console.log("stored data average rating", result);
                                             callback(null, result);
                                         }
                                     }
@@ -322,19 +366,17 @@ module.exports = function (app, AWS) {
                                     function (err, result) {
                                         if (err) {
                                             console.log("error in storing resto item data 2--------", err);
-                                            //callback(err);
+                                            res.status(400).send({ message: "Please try in some time", error: err })
                                         } else {
                                             console.log("stored data------- 2", result);
-                                            //callback(result);
-                                            res.status(200).send({ message: "successful", success: results[1] })
-                                            //res.send(results[1]);
+                                            res.status(200).send({ message: "successful", success: results[3] })
                                         }
                                     }
                                 )
                             })
                     }).catch(err => {
                         console.log("error---------", err);
-                        res.status(400).send({ "message": "Please try in some time", error: err })
+                        res.status(400).send({ message: "Please try in some time", error: err })
                     })
             }
         })
@@ -349,7 +391,7 @@ module.exports = function (app, AWS) {
                 console.log(err)
                 res.send("issue with saving");
             } else {
-                var user_id, review_id, reviewSaved;
+                var user_id, review_id, reviewSaved, review_rating, average_rating;
                 console.log('headers---------', req.headers)
                 var token = req.headers['x-access-token'];
                 if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
@@ -381,7 +423,8 @@ module.exports = function (app, AWS) {
                                     }
                                     console.log("review id------", review._id);
                                     review_id = review._id;
-                                    reviewSaved = review
+                                    review_rating = review.rating;
+                                    reviewSaved = review;
                                     callback();
                                 })
                             },
@@ -394,11 +437,15 @@ module.exports = function (app, AWS) {
                                     },
                                     {
                                         $push: {
-                                            review_id: review_id,
+                                            review_id: {
+                                                id: review_id,
+                                                rating: review_rating
+                                            },
                                             reviews: { $each: [reviewSaved], $sort: { date: -1 }, $slice: 3 }
                                         },
                                         $inc: {
-                                            recommended: req.body.rating === "5" ? 1 : 0
+                                            recommended: req.body.rating === "5" ? 1 : 0,
+                                            review_counts: 1
                                         }
                                     },
                                     {
@@ -411,6 +458,57 @@ module.exports = function (app, AWS) {
                                             callback(err);
                                         } else {
                                             console.log("stored data------- 1", result);
+                                            callback(null, result);
+                                        }
+                                    }
+                                )
+                            },
+                            function calculateAverage(callback) {
+                                // To calculate average rating using aggregate of mongo
+                                restaurantSchema.aggregate([
+                                    {
+                                        $match: {
+                                            _id: ObjectId(req.body.restaurant_id)
+                                        }
+                                    },
+                                    {
+                                        $project: {
+                                            average_rating: { $avg: "$review_id.rating" }
+                                        }
+                                    }
+
+                                ], function (err, result) {
+                                    if (err) {
+                                        console.log("error in storing average rating-------", err);
+                                        callback(err);
+                                    } else {
+                                        console.log("average rating----------", result);
+                                        average_rating = result[0].average_rating;
+                                        callback(null, result);
+                                    }
+                                })
+                            },
+
+                            function saveAverageRating(callback) {
+                                // To calculate average rating using aggregate of mongo
+                                restaurantSchema.findOneAndUpdate(
+                                    {
+                                        //"restaurant_id": req.body.restaurant_id,
+                                        _id: req.body.restaurant_id
+                                    },
+                                    {
+                                        average_rating: average_rating
+                                    },
+                                    {
+                                        upsert: true,
+                                        new: true
+                                    },
+                                    function (err, result) {
+                                        if (err) {
+                                            console.log("error in storing resto item data 1-------", err);
+                                            callback(err);
+                                        } else {
+                                            console.log("stored data average rating", result);
                                             callback(null, result);
                                         }
                                     }
@@ -432,6 +530,7 @@ module.exports = function (app, AWS) {
                                     function (err, result) {
                                         if (err) {
                                             console.log("error in storing resto item data 2--------", err);
+                                            res.status(400).send({ message: "Please try in some time", error: err })
                                             //callback(err);
                                         } else {
                                             console.log("stored data------- 2", result);
@@ -552,8 +651,14 @@ module.exports = function (app, AWS) {
     });
 
     app.get("/getRestaurants", (req, res) => {
-        restaurantSchema.find(function (err, resto) {
-            res.json({ docs: resto })
+        restaurantSchema.find(function (err, results) {
+            if (err) {
+                console.log("error in storing resto item data 2--------", err);
+                res.status(400).send({ message: "Please try in some time", error: err })
+            } else {
+                console.log("stored data------- 2", results);
+                res.status(200).send({ message: "successful", success: results })
+            }
         });
     });
 
